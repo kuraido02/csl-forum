@@ -1,0 +1,292 @@
+# CSL Forum — API Contract (Phase 1)
+
+Shared agreement between **backend (server/)** and **frontend (client/)**.
+If an endpoint changes, update this file in the same pull request.
+
+## Conventions
+
+- Base URL (dev): `http://localhost:3000/api`
+- All request/response bodies are JSON, except avatar upload (`multipart/form-data`).
+- JSON keys are **camelCase**. (Database columns are snake_case; the backend converts.)
+- Dates are ISO 8601 strings in UTC, e.g. `"2026-11-04T09:30:00.000Z"`.
+- **Auth uses an httpOnly cookie** named `token`, set by the server on login.
+  - Frontend must send `credentials: "include"` on every request (fetch) or `withCredentials: true` (axios).
+  - Server CORS allows origin `http://localhost:5173` with credentials.
+  - The frontend cannot read the cookie. To know who is logged in, call `GET /auth/me`.
+- 🔒 = login required. 🛡️ = admin only.
+
+### Error format (every error)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Please fix the highlighted fields.",
+    "fields": { "email": "Email is already used." }
+  }
+}
+```
+
+`fields` is only present for validation errors. Show `message` to the user; use `fields` to mark inputs.
+
+| HTTP | code | Meaning |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Bad or missing input |
+| 401 | `UNAUTHENTICATED` | Not logged in / bad credentials |
+| 403 | `FORBIDDEN` | Logged in but not allowed (e.g. not admin) |
+| 403 | `EMAIL_NOT_VERIFIED` | Action needs a verified email |
+| 403 | `ACCOUNT_BANNED` | Account is banned |
+| 404 | `NOT_FOUND` | Thing doesn't exist |
+| 409 | `CONFLICT` | Username/email already taken |
+| 410 | `TOKEN_INVALID` | Verification/reset token is wrong, used, or expired |
+| 429 | `RATE_LIMITED` | Too many attempts |
+| 500 | `SERVER_ERROR` | Our bug |
+
+### Field rules (frontend should validate the same way)
+
+| Field | Rule |
+|---|---|
+| `username` | 3–30 chars, letters/numbers/underscore only, case-insensitive unique |
+| `email` | valid email format, unique |
+| `password` | min 8 chars, at least 1 letter and 1 number |
+| `displayName` | 1–50 chars |
+| `bio` | up to 500 chars |
+| `avatar` | image/jpeg, image/png, image/webp; max 2 MB |
+| `role` (signup) | `"student"` or `"teacher"` |
+| `schoolIdNumber` | up to 30 chars |
+| `yearLevel` | integer 1–4 |
+
+### The `user` object (returned by several endpoints)
+
+```json
+{
+  "id": 12,
+  "username": "ivan_clyd",
+  "email": "ivan@school.edu.ph",
+  "role": "student",
+  "status": "active",
+  "emailVerified": true,
+  "schoolVerified": false,
+  "createdAt": "2026-11-04T09:30:00.000Z",
+  "profile": {
+    "displayName": "Ivan Clyd",
+    "bio": "BSCS 4th year",
+    "avatarUrl": "/uploads/avatars/12.png",
+    "schoolIdNumber": "2022-00123",
+    "program": "BSCS",
+    "yearLevel": 4
+  }
+}
+```
+
+`email` and `schoolIdNumber` are **only** returned to the account owner and admins. Other users get the public profile below.
+
+---
+
+## 1. Auth
+
+### POST `/auth/register`
+Create an account and email a verification link.
+
+Request
+```json
+{
+  "username": "ivan_clyd",
+  "email": "ivan@school.edu.ph",
+  "password": "Secret123",
+  "displayName": "Ivan Clyd",
+  "role": "student"
+}
+```
+- `201` → `{ "user": { ...user } }` (user is **not** logged in yet; they must verify email, then log in)
+- `400 VALIDATION_ERROR`, `409 CONFLICT` (username or email taken; `fields` says which)
+
+### POST `/auth/login`
+Request
+```json
+{ "identifier": "ivan_clyd", "password": "Secret123" }
+```
+`identifier` can be the username **or** the email.
+- `200` → `{ "user": { ...user } }` and the `token` cookie is set
+- `401 UNAUTHENTICATED` (same message for wrong username or wrong password)
+- `403 EMAIL_NOT_VERIFIED`, `403 ACCOUNT_BANNED`
+- `429 RATE_LIMITED`
+
+### POST `/auth/logout` 🔒
+- `204` (no body). Cookie is cleared.
+
+### GET `/auth/me` 🔒
+Call this when the app loads to restore the logged-in state.
+- `200` → `{ "user": { ...user } }`
+- `401 UNAUTHENTICATED` → show logged-out UI
+
+### POST `/auth/verify-email`
+The link in the email points to the **frontend**: `http://localhost:5173/verify-email?token=<token>`.
+That page reads the token from the URL and calls:
+```json
+{ "token": "a1b2c3..." }
+```
+- `200` → `{ "message": "Email verified." }`
+- `410 TOKEN_INVALID`
+
+### POST `/auth/resend-verification`
+```json
+{ "email": "ivan@school.edu.ph" }
+```
+- `200` → `{ "message": "If the account exists, a new link was sent." }` (always, to avoid leaking who has accounts)
+
+### POST `/auth/forgot-password`
+```json
+{ "email": "ivan@school.edu.ph" }
+```
+- `200` → `{ "message": "If the account exists, a reset link was sent." }` (always the same)
+- Link goes to `http://localhost:5173/reset-password?token=<token>`. Token expires in 1 hour.
+
+### POST `/auth/reset-password`
+```json
+{ "token": "a1b2c3...", "newPassword": "NewSecret456" }
+```
+- `200` → `{ "message": "Password updated." }`
+- `400 VALIDATION_ERROR`, `410 TOKEN_INVALID`
+
+### POST `/auth/change-password` 🔒
+```json
+{ "currentPassword": "Secret123", "newPassword": "NewSecret456" }
+```
+- `200` → `{ "message": "Password updated." }`
+- `401 UNAUTHENTICATED` (wrong current password), `400 VALIDATION_ERROR`
+
+---
+
+## 2. Account & Profile
+
+### GET `/users/:username`
+Public profile of any user (login not required in Phase 1).
+- `200`
+```json
+{
+  "user": {
+    "id": 12,
+    "username": "ivan_clyd",
+    "role": "student",
+    "schoolVerified": true,
+    "createdAt": "2026-11-04T09:30:00.000Z",
+    "profile": {
+      "displayName": "Ivan Clyd",
+      "bio": "BSCS 4th year",
+      "avatarUrl": "/uploads/avatars/12.png",
+      "program": "BSCS",
+      "yearLevel": 4
+    }
+  }
+}
+```
+- `404 NOT_FOUND` (also for deleted users)
+
+### PATCH `/users/me` 🔒
+Edit profile. Send only the fields you want to change.
+```json
+{
+  "displayName": "Ivan C. Suello",
+  "bio": "Web dev student",
+  "program": "BSCS",
+  "yearLevel": 4,
+  "schoolIdNumber": "2022-00123"
+}
+```
+- `200` → `{ "user": { ...user } }`
+- `400 VALIDATION_ERROR`, `409 CONFLICT` (school ID already used)
+
+### POST `/users/me/avatar` 🔒
+`multipart/form-data` with one file field named **`avatar`**.
+- `200` → `{ "avatarUrl": "/uploads/avatars/12.png" }`
+- `400 VALIDATION_ERROR` (wrong type / too big)
+- Display with `http://localhost:3000` + `avatarUrl`.
+
+### DELETE `/users/me/avatar` 🔒
+- `204` (profile goes back to the default avatar)
+
+### DELETE `/users/me` 🔒
+Delete own account (soft delete). Requires password.
+```json
+{ "password": "Secret123" }
+```
+- `204` and the cookie is cleared
+- `401 UNAUTHENTICATED` (wrong password)
+
+### GET `/users/:username/posts`  *(stub until Phase 2)*
+### GET `/users/:username/comments`  *(stub until Phase 3)*
+Return the list shape below so the profile tabs can be built now.
+Until those phases exist they return an empty list:
+```json
+{ "items": [], "page": 1, "pageSize": 20, "total": 0 }
+```
+
+---
+
+## 3. School verification (student / teacher)
+
+Flow: user submits a request → admin reviews → on approval `schoolVerified` becomes `true`.
+
+### POST `/verification-requests` 🔒
+```json
+{ "schoolIdNumber": "2022-00123", "note": "BSCS 4th year, Section A" }
+```
+- `201` → `{ "request": { "id": 5, "status": "pending", "createdAt": "..." } }`
+- `409 CONFLICT` (already has a pending request, or already verified)
+- `403 EMAIL_NOT_VERIFIED`
+
+### GET `/verification-requests/me` 🔒
+- `200` → `{ "request": { "id": 5, "status": "pending" | "approved" | "rejected", "rejectReason": null, "createdAt": "..." } }`
+- `request` is `null` if the user never submitted one.
+
+### GET `/admin/verification-requests?status=pending` 🔒🛡️
+- `200`
+```json
+{
+  "items": [
+    {
+      "id": 5,
+      "status": "pending",
+      "schoolIdNumber": "2022-00123",
+      "note": "BSCS 4th year, Section A",
+      "createdAt": "2026-11-04T10:00:00.000Z",
+      "user": { "id": 12, "username": "ivan_clyd", "role": "student", "email": "ivan@school.edu.ph", "displayName": "Ivan Clyd" }
+    }
+  ],
+  "page": 1, "pageSize": 20, "total": 1
+}
+```
+
+### PATCH `/admin/verification-requests/:id` 🔒🛡️
+```json
+{ "status": "approved" }
+```
+or
+```json
+{ "status": "rejected", "rejectReason": "ID number not found in the student list." }
+```
+- `200` → `{ "request": { ... } }`
+- `404 NOT_FOUND`, `403 FORBIDDEN`
+
+---
+
+## Frontend pages this contract supports
+
+| Page | Route | Endpoints |
+|---|---|---|
+| Register | `/register` | `POST /auth/register` |
+| Login | `/login` | `POST /auth/login` |
+| Verify email | `/verify-email?token=` | `POST /auth/verify-email`, `POST /auth/resend-verification` |
+| Forgot password | `/forgot-password` | `POST /auth/forgot-password` |
+| Reset password | `/reset-password?token=` | `POST /auth/reset-password` |
+| Profile (view) | `/u/:username` | `GET /users/:username`, posts/comments stubs |
+| Edit profile / settings | `/settings` | `PATCH /users/me`, avatar, `change-password`, `DELETE /users/me` |
+| Get verified | `/settings/verification` | `POST /verification-requests`, `GET /verification-requests/me` |
+| Admin: verification queue | `/admin/verifications` | the two `/admin/...` endpoints |
+
+## Open decisions (need both of us)
+
+1. **Verified email vs. school email.** Currently any email works and the admin approves school identity. Alternative: require a school email domain (e.g. `@school.edu.ph`). Which does the school use?
+2. **Can unverified users log in?** Currently NO — they must verify their email first (`403 EMAIL_NOT_VERIFIED`).
+3. **First admin account** is created by a seed script, not through the API.
