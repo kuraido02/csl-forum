@@ -8,6 +8,12 @@ const { sendError, sendValidationError } = require("../utils/http");
 
 const router = express.Router();
 
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+};
+
 // Rules for the data we accept (matches docs/api-contract.md)
 const registerSchema = z.object({
   username: z
@@ -149,18 +155,21 @@ router.post("/login", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.cookie("token", token, {
-      httpOnly: true,                                  // JavaScript in the browser can't read it
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",   // HTTPS only when deployed
-      maxAge: 7 * 24 * 60 * 60 * 1000,                 // 7 days
-    });
+res.cookie("token", token, {
+  ...cookieOptions,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+});
 
-    res.json({ user: formatUser(user) });
+res.json({ user: formatUser(user) });
   } catch (err) {
     console.error(err);
     sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
   }
+});
+
+router.post("/logout", (req, res) => {
+  res.clearCookie("token", cookieOptions);
+  res.status(204).send();
 });
 
 module.exports = router;
