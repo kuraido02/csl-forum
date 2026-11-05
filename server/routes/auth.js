@@ -5,6 +5,7 @@ const db = require("../db");
 const jwt = require("jsonwebtoken");
 const formatUser = require("../utils/formatUser");
 const { sendError, sendValidationError } = require("../utils/http");
+const requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
@@ -170,6 +171,31 @@ res.json({ user: formatUser(user) });
 router.post("/logout", (req, res) => {
   res.clearCookie("token", cookieOptions);
   res.status(204).send();
+});
+
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT u.*, p.display_name, p.bio, p.avatar_url,
+              p.school_id_number, p.program, p.year_level
+       FROM users u
+       JOIN profiles p ON p.user_id = u.id
+       WHERE u.id = ? AND u.status = 'active'
+       LIMIT 1`,
+      [req.user.id]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      res.clearCookie("token", cookieOptions);
+      return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
+    }
+
+    res.json({ user: formatUser(user) });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
 });
 
 module.exports = router;
