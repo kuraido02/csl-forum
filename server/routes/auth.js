@@ -2,6 +2,9 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { z } = require("zod");
 const db = require("../db");
+const jwt = require("jsonwebtoken");
+const formatUser = require("../utils/formatUser");
+const { sendError, sendValidationError } = require("../utils/http");
 
 const router = express.Router();
 
@@ -99,6 +102,64 @@ router.post("/register", async (req, res) => {
     });
   } finally {
     conn.release();
+  }
+});
+
+const loginSchema = z.object({
+  identifier: z.string().trim().min(1, "Required."),
+  password: z.string().min(1, "Required."),
+});
+
+router.post("/login", async (req, res) => {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  const { identifier, password } = parsed.data;
+
+  try {
+    // identifier can be the username OR the email; deleted accounts are skipped
+    const [rows] = await db.query(
+      `SELECT u.*, p.display_name, p.bio, p.avatar_url,
+              p.school_id_number, p.program, p.year_level
+       FROM users u
+       JOIN profiles p ON p.user_id = u.id
+       WHERE (u.username = ? OR u.email = ?) AND u.status <> 'deleted'
+       LIMIT 1`,
+      [identifier, identifier.toLowerCase()]
+    );
+    const user = rows[0];
+
+    // Same message whether the user or the password is wrong,
+    // so nobody can use this to find out which usernames exist
+    const passwordOk = user && (await bcrypt.compare(password, user.password_hash));
+    if (!passwordOk) {
+      return sendError(res, 401, "UNAUTHENTICATED", "Invalid username or password.");
+    }
+
+    if (user.status === "banned") {
+      return sendError(res, 403, "ACCOUNT_BANNED", "This account is banned.");
+    }
+    if (!user.email_verified_at) {
+      return sendError(res, 403, "EMAIL_NOT_VERIFIED", "Please verify your email first.");
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,                                  // JavaScript in the browser can't read it
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",   // HTTPS only when deployed
+      maxAge: 7 * 24 * 60 * 60 * 1000,                 // 7 days
+    });
+
+    res.json({ user: formatUser(user) });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
   }
 });
 
