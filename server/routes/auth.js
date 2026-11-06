@@ -206,4 +206,48 @@ router.get("/me", requireAuth, async (req, res) => {
   }
 });
 
+const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Token is required."),
+});
+
+router.post("/verify-email", async (req, res) => {
+  const parsed = verifyEmailSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  const tokenHash = hashToken(parsed.data.token);
+
+  try {
+    const [rows] = await db.query(
+      `SELECT id, user_id FROM email_tokens
+       WHERE token_hash = ? AND type = 'verify_email'
+         AND used_at IS NULL AND expires_at > NOW()
+       LIMIT 1`,
+      [tokenHash]
+    );
+    const record = rows[0];
+    if (!record) {
+      return sendError(res, 410, "TOKEN_INVALID", "This link is invalid or has expired.");
+    }
+
+    // Mark the token as used. If another request used it first, stop.
+    const [marked] = await db.query(
+      "UPDATE email_tokens SET used_at = NOW() WHERE id = ? AND used_at IS NULL",
+      [record.id]
+    );
+    if (marked.affectedRows === 0) {
+      return sendError(res, 410, "TOKEN_INVALID", "This link is invalid or has expired.");
+    }
+
+    await db.query(
+      "UPDATE users SET email_verified_at = NOW() WHERE id = ? AND email_verified_at IS NULL",
+      [record.user_id]
+    );
+
+    res.json({ message: "Email verified." });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
