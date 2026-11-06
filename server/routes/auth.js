@@ -250,4 +250,36 @@ router.post("/verify-email", async (req, res) => {
   }
 });
 
+const resendSchema = z.object({
+  email: z.string().email("Enter a valid email."),
+});
+
+router.post("/resend-verification", async (req, res) => {
+  const parsed = resendSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  try {
+    const [rows] = await db.query(
+      `SELECT id, username, email FROM users
+       WHERE email = ? AND email_verified_at IS NULL AND status = 'active'
+       LIMIT 1`,
+      [parsed.data.email.toLowerCase()]
+    );
+    const user = rows[0];
+
+    if (user) {
+      sendVerificationEmail(user.id, user.email, user.username).catch((err) =>
+        console.error("Verification email failed:", err)
+      );
+    }
+
+    // Same answer whether or not the account exists, so nobody can use this
+    // endpoint to find out which emails are registered.
+    res.json({ message: "If the account exists, a new link was sent." });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
