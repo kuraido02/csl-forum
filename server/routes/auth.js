@@ -6,6 +6,8 @@ const jwt = require("jsonwebtoken");
 const formatUser = require("../utils/formatUser");
 const { sendError, sendValidationError } = require("../utils/http");
 const requireAuth = require("../middleware/requireAuth");
+const { hashToken } = require("../utils/tokens");
+const { sendVerificationEmail } = require("../utils/emails");
 
 const router = express.Router();
 
@@ -65,6 +67,12 @@ router.post("/register", async (req, res) => {
       [result.insertId, displayName]
     );
     await conn.commit();
+
+    // Email the verification link. If sending fails the account still exists
+    // and the user can request a new link with "resend".
+    sendVerificationEmail(result.insertId, email.toLowerCase(), username).catch((err) =>
+      console.error("Verification email failed:", err)
+    );
 
     // 3. Send back the new user (never send the password hash)
     res.status(201).json({
