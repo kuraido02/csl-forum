@@ -285,8 +285,8 @@ or
 | Get verified | `/settings/verification` | `POST /verification-requests`, `GET /verification-requests/me` |
 | Admin: verification queue | `/admin/verifications` | the two `/admin/...` endpoints |
 
-## Open decisions (need both of us)
+## Decisions
 
-1. **Verified email vs. school email.** Currently any email works and the admin approves school identity. Alternative: require a school email domain (e.g. `@school.edu.ph`). Which does the school use?
-2. **Can unverified users log in?** Currently NO — they must verify their email first (`403 EMAIL_NOT_VERIFIED`).
+1. **Email verification** uses any active email (Gmail etc.). A verification link is emailed on registration and the user must click it before logging in.
+2. **School verification** is separate: the user submits their school ID and an admin approves it. Until then the user can read but not post or comment.
 3. **First admin account** is created by a seed script, not through the API.
