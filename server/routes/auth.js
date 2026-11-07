@@ -378,4 +378,46 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Required."),
+  newPassword: passwordRule,
+});
+
+router.post("/change-password", requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  const { currentPassword, newPassword } = parsed.data;
+
+  try {
+    const [rows] = await db.query(
+      "SELECT password_hash FROM users WHERE id = ? AND status = 'active'",
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user) return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
+
+    const currentOk = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!currentOk) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+        currentPassword: "Current password is incorrect.",
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+        newPassword: "New password must be different from the current one.",
+      });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [newHash, req.user.id]);
+
+    res.json({ message: "Password updated." });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
