@@ -8,6 +8,7 @@ const { sendError, sendValidationError } = require("../utils/http");
 const requireAuth = require("../middleware/requireAuth");
 const { hashToken } = require("../utils/tokens");
 const { sendVerificationEmail } = require("../utils/emails");
+const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/emails");
 
 const router = express.Router();
 
@@ -17,17 +18,19 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === "production",
 };
 
+const passwordRule = z
+  .string()
+  .min(8, "At least 8 characters.")
+  .regex(/[A-Za-z]/, "Needs at least one letter.")
+  .regex(/[0-9]/, "Needs at least one number.");
+
 // Rules for the data we accept (matches docs/api-contract.md)
 const registerSchema = z.object({
   username: z
     .string()
     .regex(/^[a-zA-Z0-9_]{3,30}$/, "3-30 characters: letters, numbers, underscore only."),
   email: z.string().email("Enter a valid email.").max(255),
-  password: z
-    .string()
-    .min(8, "At least 8 characters.")
-    .regex(/[A-Za-z]/, "Needs at least one letter.")
-    .regex(/[0-9]/, "Needs at least one number."),
+    password: passwordRule,
   displayName: z.string().trim().min(1, "Required.").max(50),
   role: z.enum(["student", "teacher"]),
 });
