@@ -285,4 +285,33 @@ router.post("/resend-verification", async (req, res) => {
   }
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email."),
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  try {
+    const [rows] = await db.query(
+      "SELECT id, username, email FROM users WHERE email = ? AND status = 'active' LIMIT 1",
+      [parsed.data.email.toLowerCase()]
+    );
+    const user = rows[0];
+
+    if (user) {
+      sendPasswordResetEmail(user.id, user.email, user.username).catch((err) =>
+        console.error("Password reset email failed:", err)
+      );
+    }
+
+    // Same answer whether or not the account exists
+    res.json({ message: "If the account exists, a reset link was sent." });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
