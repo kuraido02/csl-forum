@@ -11,6 +11,7 @@ app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/users", require("./routes/users"));
 
 // Test route: checks that the server can talk to MySQL
 app.get("/api/health", async (req, res) => {
