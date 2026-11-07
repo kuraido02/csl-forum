@@ -7,7 +7,6 @@ const formatUser = require("../utils/formatUser");
 const { sendError, sendValidationError } = require("../utils/http");
 const requireAuth = require("../middleware/requireAuth");
 const { hashToken } = require("../utils/tokens");
-const { sendVerificationEmail } = require("../utils/emails");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/emails");
 
 const router = express.Router();
@@ -311,6 +310,71 @@ router.post("/forgot-password", async (req, res) => {
   } catch (err) {
     console.error(err);
     sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required."),
+  newPassword: passwordRule,
+});
+
+router.post("/reset-password", async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  const { token, newPassword } = parsed.data;
+  const tokenHash = hashToken(token);
+
+  let conn;
+  try {
+    // 1. Find a valid, unused, unexpired reset token
+    const [rows] = await db.query(
+      `SELECT id, user_id FROM email_tokens
+       WHERE token_hash = ? AND type = 'reset_password'
+         AND used_at IS NULL AND expires_at > NOW()
+       LIMIT 1`,
+      [tokenHash]
+    );
+    const record = rows[0];
+    if (!record) {
+      return sendError(res, 410, "TOKEN_INVALID", "This link is invalid or has expired.");
+    }
+
+    // 2. Hash the new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // 3. Use the token and save the password together, or neither
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    const [claimed] = await conn.query(
+      "UPDATE email_tokens SET used_at = NOW() WHERE id = ? AND used_at IS NULL",
+      [record.id]
+    );
+    if (claimed.affectedRows === 0) {
+      await conn.rollback();
+      return sendError(res, 410, "TOKEN_INVALID", "This link is invalid or has expired.");
+    }
+
+    await conn.query("UPDATE users SET password_hash = ? WHERE id = ?", [
+      passwordHash,
+      record.user_id,
+    ]);
+
+    // Cancel any other reset links still open for this user
+    await conn.query(
+      "UPDATE email_tokens SET used_at = NOW() WHERE user_id = ? AND type = 'reset_password' AND used_at IS NULL",
+      [record.user_id]
+    );
+
+    await conn.commit();
+    res.json({ message: "Password updated." });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  } finally {
+    if (conn) conn.release();
   }
 });
 
