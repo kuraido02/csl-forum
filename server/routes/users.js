@@ -174,4 +174,56 @@ router.get("/:username", async (req, res) => {
   }
 });
 
+router.post("/me/avatar", requireAuth, uploadAvatar, async (req, res) => {
+  if (!req.file) {
+    return sendError(res, 400, "VALIDATION_ERROR", "Choose an image to upload.", {
+      avatar: "Choose an image to upload.",
+    });
+  }
+
+  const type = detectImageType(req.file.buffer);
+  if (!type) {
+    return sendError(res, 400, "VALIDATION_ERROR", "Only JPEG, PNG or WebP images are allowed.", {
+      avatar: "Only JPEG, PNG or WebP images are allowed.",
+    });
+  }
+
+  const filename = `${req.user.id}-${Date.now()}.${type}`;
+  const avatarUrl = `/uploads/avatars/${filename}`;
+
+  try {
+    const [rows] = await db.query("SELECT avatar_url FROM profiles WHERE user_id = ?", [
+      req.user.id,
+    ]);
+    const oldUrl = rows[0]?.avatar_url;
+
+    await fs.promises.writeFile(path.join(avatarDir, filename), req.file.buffer);
+    await db.query("UPDATE profiles SET avatar_url = ? WHERE user_id = ?", [
+      avatarUrl,
+      req.user.id,
+    ]);
+
+    removeAvatarFile(oldUrl);
+    res.json({ avatarUrl });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
+router.delete("/me/avatar", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT avatar_url FROM profiles WHERE user_id = ?", [
+      req.user.id,
+    ]);
+    await db.query("UPDATE profiles SET avatar_url = NULL WHERE user_id = ?", [req.user.id]);
+
+    removeAvatarFile(rows[0]?.avatar_url);
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
