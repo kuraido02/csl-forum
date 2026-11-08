@@ -5,8 +5,64 @@ const requireAuth = require("../middleware/requireAuth");
 const formatUser = require("../utils/formatUser");
 const { findFullUserById } = require("../utils/users");
 const { sendError, sendValidationError } = require("../utils/http");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 
 const router = express.Router();
+
+// Where avatars are stored: server/uploads/avatars
+const avatarDir = path.join(__dirname, "..", "uploads", "avatars");
+fs.mkdirSync(avatarDir, { recursive: true });
+
+// Keep the upload in memory (max 2 MB, one file) so we can check it before saving
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+});
+
+// Look at the first bytes of the file to find out what it REALLY is.
+// Never trust the file name or the type the browser claims.
+function detectImageType(buffer) {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "jpg";
+  }
+  const pngStart = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(pngStart)) {
+    return "png";
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "webp";
+  }
+  return null;
+}
+
+// Delete an old avatar file from disk (ignore errors if it's already gone)
+function removeAvatarFile(avatarUrl) {
+  if (!avatarUrl) return;
+  const file = path.join(avatarDir, path.basename(avatarUrl));
+  fs.promises.unlink(file).catch(() => {});
+}
+
+// Run multer, but report its errors in our JSON error format
+function uploadAvatar(req, res, next) {
+  upload.single("avatar")(req, res, (err) => {
+    if (!err) return next();
+
+    if (err instanceof multer.MulterError) {
+      const message =
+        err.code === "LIMIT_FILE_SIZE"
+          ? "Image must be 2 MB or smaller."
+          : "Upload one file in the field named 'avatar'.";
+      return sendError(res, 400, "VALIDATION_ERROR", message, { avatar: message });
+    }
+    next(err);
+  });
+}
 
 // Text field: trims spaces, limits length, and turns "" into null (clears the field)
 const optionalText = (max) =>
