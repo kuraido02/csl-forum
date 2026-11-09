@@ -291,4 +291,25 @@ router.delete("/me", requireAuth, async (req, res) => {
   }
 });
 
+async function sendEmptyList(req, res) {
+  try {
+    const [rows] = await db.query(
+      `SELECT id FROM users
+       WHERE username = ? AND status <> 'deleted' AND email_verified_at IS NOT NULL
+       LIMIT 1`,
+      [req.params.username]
+    );
+    if (!rows[0]) return sendError(res, 404, "NOT_FOUND", "User not found.");
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    res.json({ items: [], page, pageSize: 20, total: 0 });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+}
+
+router.get("/:username/posts", sendEmptyList);
+router.get("/:username/comments", sendEmptyList);
+
 module.exports = router;
