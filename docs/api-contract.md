@@ -112,7 +112,7 @@ Request
 - `403 EMAIL_NOT_VERIFIED`, `403 ACCOUNT_BANNED`
 - `429 RATE_LIMITED`
 
-### POST `/auth/logout` 🔒
+### POST `/auth/logout` 
 - `204` (no body). Cookie is cleared.
 
 ### GET `/auth/me` 🔒
@@ -154,7 +154,7 @@ That page reads the token from the URL and calls:
 { "currentPassword": "Secret123", "newPassword": "NewSecret456" }
 ```
 - `200` → `{ "message": "Password updated." }`
-- `401 UNAUTHENTICATED` (wrong current password), `400 VALIDATION_ERROR`
+- `400 VALIDATION_ERROR` (with fields.currentPassword)
 
 ---
 
@@ -181,7 +181,7 @@ Public profile of any user (login not required in Phase 1).
   }
 }
 ```
-- `404 NOT_FOUND` (also for deleted users)
+- `404 NOT_FOUND` (also for deleted users, it also applies to users who haven’t verified their email)
 
 ### PATCH `/users/me` 🔒
 Edit profile. Send only the fields you want to change.
@@ -211,8 +211,10 @@ Delete own account (soft delete). Requires password.
 ```json
 { "password": "Secret123" }
 ```
-- `204` and the cookie is cleared
-- `401 UNAUTHENTICATED` (wrong password)
+- `204` and the cookie is cleared. The account is soft-deleted: username and email are freed, profile data is erased.
+- `400 VALIDATION_ERROR` with `fields.password` (wrong password)
+- `401 UNAUTHENTICATED` (not logged in)
+- `403 FORBIDDEN` (admin accounts can't be deleted here)
 
 ### GET `/users/:username/posts`  *(stub until Phase 2)*
 ### GET `/users/:username/comments`  *(stub until Phase 3)*
