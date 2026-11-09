@@ -8,6 +8,8 @@ const { sendError, sendValidationError } = require("../utils/http");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
+const bcrypt = require("bcryptjs");
+const { cookieOptions } = require("../utils/cookies");
 
 const router = express.Router();
 
@@ -223,6 +225,69 @@ router.delete("/me/avatar", requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Required."),
+});
+
+router.delete("/me", requireAuth, async (req, res) => {
+  const parsed = deleteAccountSchema.safeParse(req.body);
+  if (!parsed.success) return sendValidationError(res, parsed.error);
+
+  let conn;
+  try {
+    const [rows] = await db.query(
+      `SELECT u.password_hash, u.role, p.avatar_url
+       FROM users u
+       JOIN profiles p ON p.user_id = u.id
+       WHERE u.id = ? AND u.status = 'active'`,
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user) return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
+
+    if (user.role === "admin") {
+      return sendError(res, 403, "FORBIDDEN", "Admin accounts can't be deleted here.");
+    }
+
+    const passwordOk = await bcrypt.compare(parsed.data.password, user.password_hash);
+    if (!passwordOk) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+        password: "Password is incorrect.",
+      });
+    }
+
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    await conn.query(
+      `UPDATE users
+       SET status = 'deleted', deleted_at = NOW(), username = ?, email = ?
+       WHERE id = ?`,
+      [`deleted_${req.user.id}`, `deleted_${req.user.id}@deleted.local`, req.user.id]
+    );
+    await conn.query(
+      `UPDATE profiles
+       SET display_name = '[deleted]', bio = NULL, avatar_url = NULL,
+           school_id_number = NULL, program = NULL, year_level = NULL
+       WHERE user_id = ?`,
+      [req.user.id]
+    );
+    await conn.query("DELETE FROM email_tokens WHERE user_id = ?", [req.user.id]);
+
+    await conn.commit();
+
+    removeAvatarFile(user.avatar_url);
+    res.clearCookie("token", cookieOptions);
+    res.status(204).send();
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  } finally {
+    if (conn) conn.release();
   }
 });
 
