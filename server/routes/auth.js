@@ -11,11 +11,7 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/emai
 
 const router = express.Router();
 
-const cookieOptions = {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-};
+const { cookieOptions } = require("../utils/cookies");
 
 const passwordRule = z
   .string()
