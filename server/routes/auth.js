@@ -8,6 +8,7 @@ const { sendError, sendValidationError } = require("../utils/http");
 const requireAuth = require("../middleware/requireAuth");
 const { hashToken } = require("../utils/tokens");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/emails");
+const { loginLimiter, emailLimiter, registerLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ const registerSchema = z.object({
   role: z.enum(["student", "teacher"]),
 });
 
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   // 1. Validate the input
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -123,7 +124,7 @@ const loginSchema = z.object({
   password: z.string().min(1, "Required."),
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -252,7 +253,7 @@ const resendSchema = z.object({
   email: z.string().email("Enter a valid email."),
 });
 
-router.post("/resend-verification", async (req, res) => {
+router.post("/resend-verification", emailLimiter, async (req, res) => {
   const parsed = resendSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
@@ -284,7 +285,7 @@ const forgotPasswordSchema = z.object({
   email: z.string().email("Enter a valid email."),
 });
 
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", emailLimiter, async (req, res) => {
   const parsed = forgotPasswordSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
