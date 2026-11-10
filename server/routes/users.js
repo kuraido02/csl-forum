@@ -80,7 +80,6 @@ const updateProfileSchema = z.object({
   displayName: z.string().trim().min(1, "Required.").max(50, "Up to 50 characters.").optional(),
   bio: optionalText(500),
   program: optionalText(50),
-  schoolIdNumber: optionalText(30),
   yearLevel: z
     .number("Must be a number.")
     .int("Must be a whole number.")
@@ -95,7 +94,6 @@ const profileColumns = {
   displayName: "display_name",
   bio: "bio",
   program: "program",
-  schoolIdNumber: "school_id_number",
   yearLevel: "year_level",
 };
 
@@ -276,6 +274,8 @@ router.delete("/me", requireAuth, async (req, res) => {
       [req.user.id]
     );
     await conn.query("DELETE FROM email_tokens WHERE user_id = ?", [req.user.id]);
+
+    await conn.query("DELETE FROM school_verification_requests WHERE user_id = ?", [req.user.id]);
 
     await conn.commit();
 
