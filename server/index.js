@@ -4,6 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const db = require("./db");
 const path = require("path");
+const { sendError } = require("./utils/http");
 
 const app = express();
 
@@ -27,6 +28,23 @@ app.get("/api/health", async (req, res) => {
       error: { code: "SERVER_ERROR", message: "Database connection failed." },
     });
   }
+});
+
+// Any URL that no route handled
+app.use((req, res) => {
+  sendError(res, 404, "NOT_FOUND", "Route not found.");
+});
+
+// Any error that was thrown or passed to next(err)
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+
+  if (err.type === "entity.parse.failed") {
+    return sendError(res, 400, "VALIDATION_ERROR", "Request body is not valid JSON.");
+  }
+
+  console.error(err);
+  sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
 });
 
 const PORT = process.env.PORT || 3000;
