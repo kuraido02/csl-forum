@@ -14,6 +14,7 @@ app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
+app.use("/api", require("./routes/verification"));
 
 // Test route: checks that the server can talk to MySQL
 app.get("/api/health", async (req, res) => {
