@@ -12,7 +12,7 @@ A school forum for students and teachers (thesis project).
 | Phase | What | Backend | Frontend |
 |---|---|---|---|
 | 1 | User and account foundation (register, login, profiles, school verification) | Done | In progress |
-| 2 | Core posting system | Not started | Not started |
+| 2 | Core posting system, including moderation | Database in progress | Not started |
 
 ---
 
@@ -36,13 +36,19 @@ code .
 ## 3. Set up the database
 
 1. Open XAMPP and **Start MySQL**. For phpMyAdmin, also start Apache.
-2. Create the tables. Pick one way:
+2. Install the Phase 1 tables. Pick one way:
    - **phpMyAdmin:** click **Admin** on the MySQL row, open the **Import** tab, choose `server/db/schema.sql`, and click **Import**.
    - **PowerShell**, from the project root:
      ```
      & "C:\xampp\mysql\bin\mysql.exe" -u root -e "source server/db/schema.sql"
      ```
-3. Check: a database named `csl_forum` should now exist with 4 tables (`users`, `profiles`, `email_tokens`, `school_verification_requests`).
+3. Apply the Phase 2 posting and moderation migration once:
+   ```
+   & "C:\xampp\mysql\bin\mysql.exe" -u root csl_forum -e "source server/db/migrations/002_phase2_posting_moderation.sql"
+   ```
+4. Check: `csl_forum` should contain the 4 Phase 1 tables plus `departments`, `courses`, `organizations`, `department_moderators`, `posts`, and `post_reviews`.
+
+The migration adds placeholder course, department, and organization names. Replace those with the official school names before production use. Existing profile `program` values are kept; assign each user a `course_id` before allowing posts.
 
 ## 4. Set up and run the server
 
@@ -167,3 +173,4 @@ Then open a pull request on GitHub. Rules:
 | `429 RATE_LIMITED` | Too many attempts. Wait a few minutes, or restart the server to reset the counters |
 | `npm audit` warns about vulnerabilities | Safe to ignore for now. Do not run `npm audit fix --force` |
 | `.env` changes have no effect | Restart the server. Nodemon only restarts on code changes |
+
