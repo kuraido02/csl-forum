@@ -1,0 +1,58 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #F5F5F5;
+}
+
+.navbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 50px;
+  background-color: #800000;
+}
+
+.logo {
+  color: #FFFFFF;
+  font-size: 25px;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 30px;
+}
+
+.nav-links a {
+  color: #FFFFFF;
+  text-decoration: none;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.login-btn,
+.register-btn {
+  padding: 10px 20px;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.login-btn {
+  background-color: #D4AF37;
+  color: #800000;
+}
+
+.register-btn {
+  color: #FFFFFF;
+  border: 1px solid #FFFFFF;
+}
+
