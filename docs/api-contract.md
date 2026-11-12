@@ -120,7 +120,6 @@ If an endpoint changes, update this file in the same pull request.
     "yearLevel": 2
   },
   "createdAt": "2026-11-11T09:00:00.000Z",
-  "editedAt": null,
   "publishedAt": "2026-11-11T10:30:00.000Z"
 }
 ```
@@ -132,6 +131,7 @@ If an endpoint changes, update this file in the same pull request.
   - `review` (to the author and moderators): the latest decision `{ "decision": "rejected", "note": "Please add a source.", "reviewedAt": "..." }`, or `null`.
   - `department` (to moderators and admins): the department responsible, `{ "id": 1, "code": "CS", "name": "..." }`.
   - `moderator` inside `review` (to moderators and admins only): `{ "id": 7, "username": "cs_president" }`.
+  - `createdAt` is when the post was first submitted. `publishedAt` is when a moderator first approved it (`null` until then). There is no "edited" date in Phase 2: editing a post sends it back to `pending`, and the author sees its status instead.
 
 ---
 
