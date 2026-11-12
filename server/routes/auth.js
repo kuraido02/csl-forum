@@ -21,15 +21,43 @@ const passwordRule = z
   .regex(/[0-9]/, "Needs at least one number.");
 
 // Rules for the data we accept (matches docs/api-contract.md)
-const registerSchema = z.object({
-  username: z
-    .string()
-    .regex(/^[a-zA-Z0-9_]{3,30}$/, "3-30 characters: letters, numbers, underscore only."),
-  email: z.string().email("Enter a valid email.").max(255),
+const registerSchema = z
+  .object({
+    username: z
+      .string()
+      .regex(/^[a-zA-Z0-9_]{3,30}$/, "3-30 characters: letters, numbers, underscore only."),
+    email: z.string().email("Enter a valid email.").max(255),
     password: passwordRule,
-  displayName: z.string().trim().min(1, "Required.").max(50),
-  role: z.enum(["student", "teacher"]),
-});
+    displayName: z.string().trim().min(1, "Required.").max(50),
+    role: z.enum(["student", "teacher"]),
+    courseId: z
+      .number("Choose a course.")
+      .int("Choose a course.")
+      .positive("Choose a course."),
+    schoolYear: z.unknown().optional(),
+    yearLevel: z.unknown().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role !== "student") return;
+
+    const match = typeof data.schoolYear === "string" && /^(\d{4})-(\d{4})$/.exec(data.schoolYear);
+    if (!match || Number(match[2]) !== Number(match[1]) + 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["schoolYear"],
+        message: "Use the format 2026-2027 (consecutive years).",
+      });
+    }
+
+    const level = data.yearLevel;
+    if (!Number.isInteger(level) || level < 1 || level > 4) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["yearLevel"],
+        message: "Must be a whole number from 1 to 4.",
+      });
+    }
+  });
 
 router.post("/register", registerLimiter, async (req, res) => {
   // 1. Validate the input
@@ -49,11 +77,26 @@ router.post("/register", registerLimiter, async (req, res) => {
     });
   }
 
-  const { username, email, password, displayName, role } = parsed.data;
+  const { username, email, password, displayName, role, courseId} = parsed.data;
+  // Teachers have no school year or year level, so we store NULL for them
+  const schoolYear = role === "student" ? parsed.data.schoolYear : null;
+  const yearLevel = role === "student" ? parsed.data.yearLevel : null;
 
   // 2. Save to the database (users + profiles together, or neither)
   const conn = await db.getConnection();
   try {
+        // The course must be one of the real courses in the database
+    const [courseRows] = await conn.query(
+      "SELECT id, code, name FROM courses WHERE id = ?",
+      [courseId]
+    );
+    const course = courseRows[0];
+    if (!course) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+        courseId: "Choose a valid course.",
+      });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     await conn.beginTransaction();
@@ -62,8 +105,9 @@ router.post("/register", registerLimiter, async (req, res) => {
       [username, email.toLowerCase(), passwordHash, role]
     );
     await conn.query(
-      "INSERT INTO profiles (user_id, display_name) VALUES (?, ?)",
-      [result.insertId, displayName]
+      `INSERT INTO profiles (user_id, display_name, course_id, school_year, year_level)
+       VALUES (?, ?, ?, ?, ?)`,
+      [result.insertId, displayName, course.id, schoolYear, yearLevel]
     );
     await conn.commit();
 
@@ -89,9 +133,11 @@ router.post("/register", registerLimiter, async (req, res) => {
           bio: null,
           avatarUrl: null,
           schoolIdNumber: null,
-          program: null,
-          yearLevel: null,
+          course: { id: course.id, code: course.code, name: course.name },
+          schoolYear,
+          yearLevel,
         },
+        moderator: null,
       },
     });
   } catch (err) {
