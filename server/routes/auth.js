@@ -4,6 +4,7 @@ const { z } = require("zod");
 const db = require("../db");
 const jwt = require("jsonwebtoken");
 const formatUser = require("../utils/formatUser");
+const { USER_SELECT, findFullUserById } = require("../utils/users");
 const { sendError, sendValidationError } = require("../utils/http");
 const requireAuth = require("../middleware/requireAuth");
 const { hashToken } = require("../utils/tokens");
@@ -179,10 +180,7 @@ router.post("/login", loginLimiter, async (req, res) => {
   try {
     // identifier can be the username OR the email; deleted accounts are skipped
     const [rows] = await db.query(
-      `SELECT u.*, p.display_name, p.bio, p.avatar_url,
-              p.school_id_number, p.program, p.year_level
-       FROM users u
-       JOIN profiles p ON p.user_id = u.id
+      `${USER_SELECT}
        WHERE (u.username = ? OR u.email = ?) AND u.status <> 'deleted'
        LIMIT 1`,
       [identifier, identifier.toLowerCase()]
@@ -228,16 +226,7 @@ router.post("/logout", (req, res) => {
 
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT u.*, p.display_name, p.bio, p.avatar_url,
-              p.school_id_number, p.program, p.year_level
-       FROM users u
-       JOIN profiles p ON p.user_id = u.id
-       WHERE u.id = ? AND u.status = 'active'
-       LIMIT 1`,
-      [req.user.id]
-    );
-    const user = rows[0];
+    const user = await findFullUserById(req.user.id);
 
     if (!user) {
       res.clearCookie("token", cookieOptions);
