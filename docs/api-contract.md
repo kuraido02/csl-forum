@@ -257,10 +257,13 @@ Edit profile. Send only the fields you want to change. Send `null` or `""` to cl
 ```
 - `200` → `{ "user": { ...user } }`
 - `400 VALIDATION_ERROR` (also "Nothing to update." when no field is sent)
+- `403 FORBIDDEN`
 
 Notes:
 - `schoolIdNumber` can't be edited here. It is set when an admin approves a verification request.
-- Changing `courseId` only affects posts submitted or edited **afterwards**: they go to the moderators of the new department. A department moderator can't change to a course of another department while holding the office.
+- Changing `courseId` only affects posts submitted or edited **afterwards**: they go to the moderators of the new department.
+- A department moderator can't change to a course of another department while holding the office: `403 FORBIDDEN`.
+- `schoolYear` and `yearLevel` can only be changed by students. For teachers they are ignored (same as at sign-up).
 
 ### POST `/users/me/avatar` 🔒
 `multipart/form-data` with one file field named **`avatar`**.
