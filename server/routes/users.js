@@ -175,9 +175,11 @@ router.get("/:username", async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT u.id, u.username, u.role, u.school_verified_at, u.created_at,
-              p.display_name, p.bio, p.avatar_url, p.program, p.year_level
+              p.display_name, p.bio, p.avatar_url, p.school_year, p.year_level,
+              c.id AS course_id, c.code AS course_code, c.name AS course_name
        FROM users u
        JOIN profiles p ON p.user_id = u.id
+       LEFT JOIN courses c ON c.id = p.course_id
        WHERE u.username = ?
          AND u.status <> 'deleted'
          AND u.email_verified_at IS NOT NULL
@@ -198,7 +200,10 @@ router.get("/:username", async (req, res) => {
           displayName: row.display_name,
           bio: row.bio,
           avatarUrl: row.avatar_url,
-          program: row.program,
+          course: row.course_id
+            ? { id: row.course_id, code: row.course_code, name: row.course_name }
+            : null,
+          schoolYear: row.school_year,
           yearLevel: row.year_level,
         },
       },
