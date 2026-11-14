@@ -450,7 +450,7 @@ Routing, again, because it matters: a post goes to the moderators of the departm
 
 Rules for reviewing:
 - A moderator only sees and reviews posts of **their own department**. Admins see all.
-- A moderator **cannot review their own post** (their department's other officer does, or an admin).
+- A moderator **may review their own post**. There is no self-review restriction; every decision is recorded, so a self-review stays visible.
 - Only `pending` posts can be reviewed (`409` otherwise).
 - The reviewer may **correct the organization tag** while deciding.
 - Every decision is stored: the moderator, the time, the tag before and after, and the optional note.
@@ -475,7 +475,7 @@ Full post (with `body`, `department` and `review`) for a post in the moderator's
 - `note` (optional, up to 500 chars). Recommended for rejections: the author sees it.
 - `200` → `{ "post": { ...post } }` with the new `status`
 - `400 VALIDATION_ERROR`
-- `403 FORBIDDEN` (other department, or your own post)
+- `403 FORBIDDEN` (other department)
 - `404 NOT_FOUND`
 - `409 CONFLICT` (the post is not pending)
 
@@ -550,12 +550,13 @@ Moderators can be a normal student account: their `role` stays `student`, and th
 8. **Mandatory moderation:** every post starts as `pending` and is hidden until approved.
 9. **Moderators** are the President and Vice President of each of the five departments, routed by the **author's registered course**, not by the organization tag. The server decides; the client can't override it.
 10. **Moderator powers:** approve, reject, and correct the organization tag. Every decision is recorded with the moderator, the time and an optional note.
+11. **Moderators may review their own posts.** They are responsible representatives, so there is no self-review restriction. Every decision is still recorded, so a self-review stays visible.
 
-### Assumptions to confirm (change this list when decided)
+### Assumptions to confirm (CONFIRMED)
 
 - **Viewing posts requires a login** (rule: "visible to every registered user").
 - **Teachers** register a course (their department) and may post; they have no school year or year level.
 - **School year** means the academic year, written `2026-2027`.
 - **Editing an approved post** sends it back to `pending`.
-- **Admins** can moderate every department as a fallback, and a moderator can't approve their own post.
 - Course codes, department names and organization names in the seed data are placeholders; use the school's official ones.
+- **Admins** can moderate every department. Moderators may also approve or reject their own posts (see Decision 11).
