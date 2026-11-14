@@ -105,36 +105,67 @@ router.patch("/me", requireAuth, async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);
   if (!parsed.success) return sendValidationError(res, parsed.error);
 
-  // Build "column = ?" only for the fields the client actually sent
-  const sets = [];
-  const values = [];
-  for (const [key, column] of Object.entries(profileColumns)) {
-    if (parsed.data[key] !== undefined) {
-      sets.push(`${column} = ?`);
-      values.push(parsed.data[key]);
-    }
-  }
-
-  if (sets.length === 0) {
-    return sendError(res, 400, "VALIDATION_ERROR", "Nothing to update.");
-  }
-
   try {
+    // We need the current role and moderator office to apply the rules below
+    const current = await findFullUserById(req.user.id);
+    if (!current) return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
+
+    // Build "column = ?" only for the fields that will really change
+    const sets = [];
+    const values = [];
+    const add = (column, value) => {
+      sets.push(`${column} = ?`);
+      values.push(value);
+    };
+
+    if (parsed.data.displayName !== undefined) add("display_name", parsed.data.displayName);
+    if (parsed.data.bio !== undefined) add("bio", parsed.data.bio);
+
+    if (parsed.data.courseId !== undefined) {
+      const [courseRows] = await db.query(
+        "SELECT id, department_id FROM courses WHERE id = ?",
+        [parsed.data.courseId]
+      );
+      const course = courseRows[0];
+      if (!course) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+          courseId: "Choose a valid course.",
+        });
+      }
+
+      // A President / Vice President can't move to another department's course
+      if (
+        current.moderator_department_id &&
+        current.moderator_department_id !== course.department_id
+      ) {
+        return sendError(
+          res,
+          403,
+          "FORBIDDEN",
+          "You can't change to another department's course while you hold a moderator office."
+        );
+      }
+      add("course_id", course.id);
+    }
+
+    // Only students have a school year and year level; for others we ignore them
+    if (current.role === "student") {
+      if (parsed.data.schoolYear !== undefined) add("school_year", parsed.data.schoolYear);
+      if (parsed.data.yearLevel !== undefined) add("year_level", parsed.data.yearLevel);
+    }
+
+    if (sets.length === 0) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Nothing to update.");
+    }
+
     await db.query(`UPDATE profiles SET ${sets.join(", ")} WHERE user_id = ?`, [
       ...values,
       req.user.id,
     ]);
 
     const user = await findFullUserById(req.user.id);
-    if (!user) return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
-
     res.json({ user: formatUser(user) });
   } catch (err) {
-    if (err.code === "ER_DUP_ENTRY") {
-      return sendError(res, 409, "CONFLICT", "School ID is already used.", {
-        schoolIdNumber: "School ID is already used.",
-      });
-    }
     console.error(err);
     sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
   }
