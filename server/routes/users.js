@@ -76,26 +76,30 @@ const optionalText = (max) =>
     .nullable()
     .optional();
 
+// "2026-2027": two four-digit years, the second exactly one more than the first
+const schoolYearRule = z
+  .string("Use the format 2026-2027.")
+  .refine((value) => {
+    const match = /^(\d{4})-(\d{4})$/.exec(value);
+    return match !== null && Number(match[2]) === Number(match[1]) + 1;
+  }, "Use the format 2026-2027 (consecutive years).");
+
 const updateProfileSchema = z.object({
   displayName: z.string().trim().min(1, "Required.").max(50, "Up to 50 characters.").optional(),
   bio: optionalText(500),
-  program: optionalText(50),
+  courseId: z
+    .number("Choose a course.")
+    .int("Choose a course.")
+    .positive("Choose a course.")
+    .optional(),
+  schoolYear: schoolYearRule.optional(),
   yearLevel: z
     .number("Must be a number.")
     .int("Must be a whole number.")
     .min(1, "Must be 1 to 4.")
     .max(4, "Must be 1 to 4.")
-    .nullable()
     .optional(),
 });
-
-// Which request field maps to which database column
-const profileColumns = {
-  displayName: "display_name",
-  bio: "bio",
-  program: "program",
-  yearLevel: "year_level",
-};
 
 router.patch("/me", requireAuth, async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);
