@@ -309,7 +309,8 @@ router.delete("/me", requireAuth, async (req, res) => {
     await conn.query(
       `UPDATE profiles
        SET display_name = '[deleted]', bio = NULL, avatar_url = NULL,
-           school_id_number = NULL, program = NULL, year_level = NULL
+           school_id_number = NULL, program = NULL, year_level = NULL,
+           course_id = NULL, school_year = NULL
        WHERE user_id = ?`,
       [req.user.id]
     );
