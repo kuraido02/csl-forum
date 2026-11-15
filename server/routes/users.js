@@ -318,6 +318,19 @@ router.delete("/me", requireAuth, async (req, res) => {
 
     await conn.query("DELETE FROM school_verification_requests WHERE user_id = ?", [req.user.id]);
 
+    // Vacate the moderator office, if this user holds one
+    await conn.query("DELETE FROM department_moderators WHERE user_id = ?", [req.user.id]);
+
+    // Remove pending and rejected posts (soft delete). Approved posts stay.
+    await conn.query(
+      `UPDATE posts
+       SET deleted_at = NOW()
+       WHERE author_id = ?
+         AND status IN ('pending', 'rejected')
+         AND deleted_at IS NULL`,
+      [req.user.id]
+    );
+
     await conn.commit();
 
     removeAvatarFile(user.avatar_url);
