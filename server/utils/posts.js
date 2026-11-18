@@ -35,4 +35,27 @@ async function findPostById(id) {
   return rows[0] || null;
 }
 
-module.exports = { POST_SELECT, findPostById };
+// The latest review of each post in a list, as a Map: postId -> review row.
+// One query for all the posts, so a list of 20 posts needs only one extra query.
+async function findLatestReviews(postIds) {
+  const latest = new Map();
+  if (postIds.length === 0) return latest;
+
+  const [rows] = await db.query(
+    `SELECT r.post_id, r.decision, r.note, r.created_at,
+            r.reviewer_id, u.username AS reviewer_username
+     FROM post_reviews r
+     JOIN users u ON u.id = r.reviewer_id
+     WHERE r.post_id IN (?)
+     ORDER BY r.created_at DESC, r.id DESC`,
+    [postIds]
+  );
+
+  // Rows come newest first, so the first one we see for a post is its latest
+  for (const row of rows) {
+    if (!latest.has(row.post_id)) latest.set(row.post_id, row);
+  }
+  return latest;
+}
+
+module.exports = { POST_SELECT, findPostById, findLatestReviews };
