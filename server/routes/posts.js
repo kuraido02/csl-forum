@@ -196,4 +196,55 @@ router.post("/", requireAuth, readPostForm, async (req, res) => {
   }
 });
 
+const PAGE_SIZE = 20;
+
+// The homepage list: approved posts from everyone, newest published first
+router.get("/", requireAuth, async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+
+    const where = ["p.status = 'approved'", "p.deleted_at IS NULL"];
+    const params = [];
+
+    // Optional filter by organization code
+    const code = req.query.organization;
+    if (code !== undefined && code !== "") {
+      const [orgRows] = await db.query("SELECT id FROM organizations WHERE code = ?", [
+        String(code),
+      ]);
+      if (!orgRows[0]) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+          organization: "Unknown organization.",
+        });
+      }
+      where.push("p.organization_id = ?");
+      params.push(orgRows[0].id);
+    }
+    const whereSql = where.join(" AND ");
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM posts p WHERE ${whereSql}`,
+      params
+    );
+
+    const [rows] = await db.query(
+      `${POST_SELECT}
+       WHERE ${whereSql}
+       ORDER BY p.published_at DESC, p.id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, PAGE_SIZE, (page - 1) * PAGE_SIZE]
+    );
+
+    res.json({
+      items: rows.map((row) => formatPost(row, { summary: true })),
+      page,
+      pageSize: PAGE_SIZE,
+      total,
+    });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
