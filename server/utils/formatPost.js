@@ -38,4 +38,21 @@ function formatPost(row, { summary = false, ...extras } = {}) {
   return { ...post, ...extras };
 }
 
+// Turns a review row into the `review` object from the contract.
+// Only moderators and admins also get the `moderator` part.
+function formatReview(row, { includeModerator = false } = {}) {
+  if (!row) return null;
+
+  const review = {
+    decision: row.decision,
+    note: row.note,
+    reviewedAt: row.created_at,
+  };
+  if (includeModerator) {
+    review.moderator = { id: row.reviewer_id, username: row.reviewer_username };
+  }
+  return review;
+}
+
 module.exports = formatPost;
+module.exports.formatReview = formatReview;
