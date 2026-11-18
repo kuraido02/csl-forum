@@ -153,15 +153,42 @@ router.post("/", requireAuth, readPostForm, async (req, res) => {
     ]);
     const departmentId = courseRows[0].department_id;
 
-    // 5. Save it. status is not set here: the table default is 'pending'.
-    const [result] = await db.query(
-      `INSERT INTO posts (author_id, department_id, organization_id, title, body, link_url)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [author.id, departmentId, organizationId, title, body, linkUrl]
-    );
+    // 5. Save the post and its image together, or neither.
+    // status is not set here: the table default is 'pending'.
+    const conn = await db.getConnection();
+    let savedFile = null;
+    try {
+      await conn.beginTransaction();
 
-    const row = await findPostById(result.insertId);
-    res.status(201).json({ post: formatPost(row, { review: null }) });
+      const [result] = await conn.query(
+        `INSERT INTO posts (author_id, department_id, organization_id, title, body, link_url)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [author.id, departmentId, organizationId, title, body, linkUrl]
+      );
+
+      if (req.file) {
+        // The file name starts with the post id, so it is easy to match later
+        const filename = `${result.insertId}-${Date.now()}.${imageType}`;
+        savedFile = path.join(postDir, filename);
+        await fs.promises.writeFile(savedFile, req.file.buffer);
+        await conn.query("UPDATE posts SET image_url = ? WHERE id = ?", [
+          `/uploads/posts/${filename}`,
+          result.insertId,
+        ]);
+      }
+
+      await conn.commit();
+
+      const row = await findPostById(result.insertId);
+      res.status(201).json({ post: formatPost(row, { review: null }) });
+    } catch (err) {
+      await conn.rollback();
+      // The database says "no post", so the file must not stay on disk either
+      if (savedFile) fs.promises.unlink(savedFile).catch(() => {});
+      throw err;
+    } finally {
+      conn.release();
+    }
   } catch (err) {
     console.error(err);
     sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
