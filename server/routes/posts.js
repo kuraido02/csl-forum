@@ -247,4 +247,54 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+// One post. Visibility rules: see "Who can see a post" in the contract.
+router.get("/:id", requireAuth, async (req, res) => {
+  try {
+    // The id must be a plain number, otherwise there is no such post
+    if (!/^\d+$/.test(req.params.id)) {
+      return sendError(res, 404, "NOT_FOUND", "Post not found.");
+    }
+
+    const row = await findPostById(Number(req.params.id));
+    if (!row) return sendError(res, 404, "NOT_FOUND", "Post not found.");
+
+    const viewer = await findFullUserById(req.user.id);
+    if (!viewer) return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
+
+    const isAuthor = viewer.id === row.author_id;
+    const isAdmin = viewer.role === "admin";
+    // A moderator only counts for posts of THEIR department
+    const isModerator = viewer.moderator_department_id === row.department_id;
+    const isStaff = isAdmin || isModerator;
+
+    // pending and rejected posts: author, department moderators and admins only.
+    // Everyone else gets 404, so they can't even tell the post exists.
+    if (row.status !== "approved" && !isAuthor && !isStaff) {
+      return sendError(res, 404, "NOT_FOUND", "Post not found.");
+    }
+
+    const extras = {};
+
+    // The latest review is for the author and the staff; only staff see who decided
+    if (isAuthor || isStaff) {
+      const reviews = await findLatestReviews([row.id]);
+      extras.review = formatReview(reviews.get(row.id), { includeModerator: isStaff });
+    }
+
+    // The responsible department is for the staff only
+    if (isStaff) {
+      const [deptRows] = await db.query(
+        "SELECT id, code, name FROM departments WHERE id = ?",
+        [row.department_id]
+      );
+      extras.department = deptRows[0];
+    }
+
+    res.json({ post: formatPost(row, extras) });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
