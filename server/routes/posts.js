@@ -7,21 +7,34 @@ const formatPost = require("../utils/formatPost");
 const { findPostById } = require("../utils/posts");
 const { findFullUserById } = require("../utils/users");
 const { sendError, sendValidationError } = require("../utils/http");
+const fs = require("fs");
+const path = require("path");
+const { detectImageType } = require("../utils/images");
 
 const router = express.Router();
 
-// Reads the text fields of a multipart/form-data request.
-// (C2 will change this to accept one image as well.)
-const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1 } });
+// Where post images are stored: server/uploads/posts
+const postDir = path.join(__dirname, "..", "uploads", "posts");
+fs.mkdirSync(postDir, { recursive: true });
 
+// Keep the upload in memory (max 5 MB, one file) so we can check it before saving
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+});
+
+// Reads the text fields AND the one optional file named "image".
+// Multer errors are reported in our JSON error format.
 function readPostForm(req, res, next) {
-  upload.none()(req, res, (err) => {
+  upload.single("image")(req, res, (err) => {
     if (!err) return next();
 
     if (err instanceof multer.MulterError) {
-      return sendError(res, 400, "VALIDATION_ERROR", "Image upload is not available yet.", {
-        image: "Image upload is not available yet.",
-      });
+      const message =
+        err.code === "LIMIT_FILE_SIZE"
+          ? "Image must be 5 MB or smaller."
+          : "Upload one image in the field named 'image'.";
+      return sendError(res, 400, "VALIDATION_ERROR", message, { image: message });
     }
     next(err);
   });
