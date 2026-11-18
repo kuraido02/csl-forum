@@ -114,11 +114,26 @@ router.post("/", requireAuth, readPostForm, async (req, res) => {
     const body = parsed.data.body ?? null;
     const linkUrl = parsed.data.linkUrl ?? null;
 
-    // A post needs some content (an image will count too, from C2)
-    if (!body && !linkUrl) {
+        // A post needs some content: text, a link, or an image
+    if (!body && !linkUrl && !req.file) {
       return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
-        body: "Add some text or a link.",
+        body: "Add some text, a link or an image.",
       });
+    }
+
+    // If there is an image, check what it REALLY is (first bytes, not the file name)
+    let imageType = null;
+    if (req.file) {
+      imageType = detectImageType(req.file.buffer);
+      if (!imageType) {
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Only JPEG, PNG or WebP images are allowed.",
+          { image: "Only JPEG, PNG or WebP images are allowed." }
+        );
+      }
     }
 
     // 3. The organization tag must be one of the real five
