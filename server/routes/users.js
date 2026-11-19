@@ -10,6 +10,7 @@ const path = require("path");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const { cookieOptions } = require("../utils/cookies");
+const { removePostImage } = require("../utils/images");
 
 const router = express.Router();
 
@@ -321,6 +322,16 @@ router.delete("/me", requireAuth, async (req, res) => {
     // Vacate the moderator office, if this user holds one
     await conn.query("DELETE FROM department_moderators WHERE user_id = ?", [req.user.id]);
 
+    // Remember the images of the posts we are about to remove
+    const [doomedPosts] = await conn.query(
+      `SELECT image_url FROM posts
+       WHERE author_id = ?
+         AND status IN ('pending', 'rejected')
+         AND deleted_at IS NULL
+         AND image_url IS NOT NULL`,
+      [req.user.id]
+    );
+
     // Remove pending and rejected posts (soft delete). Approved posts stay.
     await conn.query(
       `UPDATE posts
@@ -334,6 +345,7 @@ router.delete("/me", requireAuth, async (req, res) => {
     await conn.commit();
 
     removeAvatarFile(user.avatar_url);
+    doomedPosts.forEach((post) => removePostImage(post.image_url));
     res.clearCookie("token", cookieOptions);
     res.status(204).send();
   } catch (err) {
