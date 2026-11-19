@@ -346,4 +346,197 @@ router.get("/:id", requireAuth, async (req, res) => {
   }
 });
 
+// Loads a post for author-only actions (edit and delete).
+// Returns the post row, or sends the right error and returns null.
+async function loadOwnPost(req, res) {
+  if (!/^\d+$/.test(req.params.id)) {
+    sendError(res, 404, "NOT_FOUND", "Post not found.");
+    return null;
+  }
+
+  const row = await findPostById(Number(req.params.id));
+  if (!row) {
+    sendError(res, 404, "NOT_FOUND", "Post not found.");
+    return null;
+  }
+
+  if (row.author_id === req.user.id) return row;
+
+  // Not the author. If they are allowed to SEE the post it is 403;
+  // if they are not, we pretend it does not exist (404).
+  let canSee = row.status === "approved";
+  if (!canSee) {
+    const viewer = await findFullUserById(req.user.id);
+    canSee =
+      Boolean(viewer) &&
+      (viewer.role === "admin" || viewer.moderator_department_id === row.department_id);
+  }
+
+  if (canSee) {
+    sendError(res, 403, "FORBIDDEN", "You can only change your own posts.");
+  } else {
+    sendError(res, 404, "NOT_FOUND", "Post not found.");
+  }
+  return null;
+}
+
+// Every field is optional: send only what you want to change
+const updatePostSchema = z.object({
+  title: z.string().trim().min(1, "Required.").max(200, "Up to 200 characters.").optional(),
+  organizationId: z.coerce
+    .number("Choose an organization.")
+    .int("Choose an organization.")
+    .positive("Choose an organization.")
+    .optional(),
+  body: optionalText(10000),
+  linkUrl: linkUrlRule,
+  removeImage: z
+    .string()
+    .refine((value) => value === "true" || value === "false", "Use true or false.")
+    .optional(),
+});
+
+router.patch("/:id", requireAuth, readPostForm, async (req, res) => {
+  try {
+    // 1. Is it the author's own post?
+    const row = await loadOwnPost(req, res);
+    if (!row) return;
+
+    // 2. The same posting rules as creating a post
+    const author = await findFullUserById(req.user.id);
+    if (!author) return sendError(res, 401, "UNAUTHENTICATED", "Please log in.");
+    if (!author.school_verified_at) {
+      return sendError(
+        res,
+        403,
+        "SCHOOL_NOT_VERIFIED",
+        "Your school ID must be verified before you can post."
+      );
+    }
+    if (!author.course_id) {
+      return sendError(
+        res,
+        403,
+        "PROFILE_INCOMPLETE",
+        "Choose your course in your profile before posting."
+      );
+    }
+
+    // 3. Validate the fields that were sent
+    const parsed = updatePostSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return sendValidationError(res, parsed.error);
+    const { title, organizationId, body, linkUrl, removeImage } = parsed.data;
+
+    const hasChange =
+      title !== undefined ||
+      organizationId !== undefined ||
+      body !== undefined ||
+      linkUrl !== undefined ||
+      removeImage === "true" ||
+      Boolean(req.file);
+    if (!hasChange) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Nothing to update.");
+    }
+
+    // 4. A new image must really be an image
+    let imageType = null;
+    if (req.file) {
+      imageType = detectImageType(req.file.buffer);
+      if (!imageType) {
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Only JPEG, PNG or WebP images are allowed.",
+          { image: "Only JPEG, PNG or WebP images are allowed." }
+        );
+      }
+    }
+
+    // 5. A new organization tag must be one of the real five
+    if (organizationId !== undefined) {
+      const [orgRows] = await db.query("SELECT id FROM organizations WHERE id = ?", [
+        organizationId,
+      ]);
+      if (!orgRows[0]) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+          organizationId: "Choose a valid organization.",
+        });
+      }
+    }
+
+    // 6. What will the post look like AFTER the edit?
+    //    (a field that was not sent keeps its current value)
+    const finalTitle = title !== undefined ? title : row.title;
+    const finalBody = body !== undefined ? body : row.body;
+    const finalLink = linkUrl !== undefined ? linkUrl : row.link_url;
+    const finalOrganizationId = organizationId !== undefined ? organizationId : row.org_id;
+
+    let finalImageUrl = row.image_url;
+    if (removeImage === "true") finalImageUrl = null;
+
+    // The post must still have some content
+    if (!finalBody && !finalLink && !finalImageUrl && !req.file) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+        body: "A post needs text, a link or an image.",
+      });
+    }
+
+    // 7. The moderating department is decided AGAIN from the author's course now
+    const [courseRows] = await db.query("SELECT department_id FROM courses WHERE id = ?", [
+      author.course_id,
+    ]);
+    const departmentId = courseRows[0].department_id;
+
+    // 8. Save everything together, or nothing
+    const conn = await db.getConnection();
+    let newFile = null;
+    try {
+      await conn.beginTransaction();
+
+      if (req.file) {
+        const filename = `${row.id}-${Date.now()}.${imageType}`;
+        newFile = path.join(postDir, filename);
+        await fs.promises.writeFile(newFile, req.file.buffer);
+        finalImageUrl = `/uploads/posts/${filename}`;
+      }
+
+      await conn.query(
+        `UPDATE posts
+         SET title = ?, body = ?, link_url = ?, organization_id = ?,
+             image_url = ?, department_id = ?, status = 'pending'
+         WHERE id = ?`,
+        [
+          finalTitle,
+          finalBody,
+          finalLink,
+          finalOrganizationId,
+          finalImageUrl,
+          departmentId,
+          row.id,
+        ]
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      if (newFile) fs.promises.unlink(newFile).catch(() => {});
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    // The save worked, so the old image file is not needed any more
+    if (finalImageUrl !== row.image_url) removePostImage(row.image_url);
+
+    // 9. Send back the updated post with its latest review (if any)
+    const updated = await findPostById(row.id);
+    const reviews = await findLatestReviews([row.id]);
+    res.json({ post: formatPost(updated, { review: formatReview(reviews.get(row.id)) }) });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
