@@ -247,6 +247,59 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+const POST_STATUSES = ["pending", "approved", "rejected"];
+
+// The author's own posts: every status, newest first, with the latest review
+router.get("/mine", requireAuth, async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+
+    const where = ["p.author_id = ?", "p.deleted_at IS NULL"];
+    const params = [req.user.id];
+
+    // Optional filter by status
+    const status = req.query.status;
+    if (status !== undefined && status !== "") {
+      if (!POST_STATUSES.includes(status)) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Please fix the highlighted fields.", {
+          status: "Use pending, approved or rejected.",
+        });
+      }
+      where.push("p.status = ?");
+      params.push(status);
+    }
+    const whereSql = where.join(" AND ");
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM posts p WHERE ${whereSql}`,
+      params
+    );
+
+    const [rows] = await db.query(
+      `${POST_SELECT}
+       WHERE ${whereSql}
+       ORDER BY p.created_at DESC, p.id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, PAGE_SIZE, (page - 1) * PAGE_SIZE]
+    );
+
+    // One query for the latest review of every post on this page
+    const reviews = await findLatestReviews(rows.map((row) => row.id));
+
+    res.json({
+      items: rows.map((row) =>
+        formatPost(row, { summary: true, review: formatReview(reviews.get(row.id)) })
+      ),
+      page,
+      pageSize: PAGE_SIZE,
+      total,
+    });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 // One post. Visibility rules: see "Who can see a post" in the contract.
 router.get("/:id", requireAuth, async (req, res) => {
   try {

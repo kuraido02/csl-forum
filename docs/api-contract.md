@@ -424,6 +424,7 @@ The homepage list: approved posts from everyone, newest published first.
 The author's own posts, newest first, including pending and rejected ones with their `review`.
 - `status` (optional): `pending`, `approved` or `rejected`.
 - `200` → `{ "items": [ ...PostSummary ], "page": 1, "pageSize": 20, "total": 4 }`
+- `400 VALIDATION_ERROR` (`fields.status`: not one of `pending`, `approved`, `rejected`)
 
 ### GET `/posts/:id` 🔒
 - `200` → `{ "post": { ...post } }`
