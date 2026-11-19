@@ -539,4 +539,24 @@ router.patch("/:id", requireAuth, readPostForm, async (req, res) => {
   }
 });
 
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const row = await loadOwnPost(req, res);
+    if (!row) return;
+
+    // Soft delete: the record stays, but nobody can see the post any more
+    await db.query("UPDATE posts SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL", [
+      row.id,
+    ]);
+
+    // The image file is not needed any more
+    removePostImage(row.image_url);
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
