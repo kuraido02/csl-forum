@@ -10,13 +10,9 @@ const { findFullUserById } = require("../utils/users");
 const { sendError, sendValidationError } = require("../utils/http");
 const fs = require("fs");
 const path = require("path");
-const { detectImageType } = require("../utils/images");
+const { detectImageType, postDir, removePostImage } = require("../utils/images");
 
 const router = express.Router();
-
-// Where post images are stored: server/uploads/posts
-const postDir = path.join(__dirname, "..", "uploads", "posts");
-fs.mkdirSync(postDir, { recursive: true });
 
 // Keep the upload in memory (max 5 MB, one file) so we can check it before saving
 const upload = multer({

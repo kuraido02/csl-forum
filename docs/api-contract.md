@@ -433,8 +433,13 @@ The author's own posts, newest first, including pending and rejected ones with t
 ### PATCH `/posts/:id` 🔒
 Author only. `multipart/form-data` with any of `title`, `body`, `linkUrl`, `organizationId`, `image`, plus `removeImage=true` to remove the current image. Send `body=` (empty) or `linkUrl=` (empty) to clear them.
 - `200` → `{ "post": { ...post } }` with `"status": "pending"`
-- `400 VALIDATION_ERROR` (also "Nothing to update.")
+- `400 VALIDATION_ERROR` (also "Nothing to update."; also when the edit would leave the post with no `body`, `linkUrl` or image)
 - `403 FORBIDDEN` (not your post), `404 NOT_FOUND`
+- `403 SCHOOL_NOT_VERIFIED`, `403 PROFILE_INCOMPLETE` (same posting rules as creating)
+
+- If a new `image` and `removeImage=true` are both sent, the new image wins.
+- The moderating department is decided again from the author's course at the time of the edit.
+- A post the user is not allowed to see returns `404`, not `403`, so its existence stays private.
 
 ### DELETE `/posts/:id` 🔒
 Author only (soft delete).

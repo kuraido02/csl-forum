@@ -1,3 +1,10 @@
+const fs = require("fs");
+const path = require("path");
+
+// Where post images are stored: server/uploads/posts
+const postDir = path.join(__dirname, "..", "uploads", "posts");
+fs.mkdirSync(postDir, { recursive: true });
+
 // Look at the first bytes of the file to find out what it REALLY is.
 // Never trust the file name or the type the browser claims.
 function detectImageType(buffer) {
@@ -18,4 +25,11 @@ function detectImageType(buffer) {
   return null;
 }
 
-module.exports = { detectImageType };
+// Delete a post's image file from disk. Safe to call with null, and it
+// ignores errors if the file is already gone (same idea as removeAvatarFile).
+function removePostImage(imageUrl) {
+  if (!imageUrl) return;
+  fs.promises.unlink(path.join(postDir, path.basename(imageUrl))).catch(() => {});
+}
+
+module.exports = { detectImageType, postDir, removePostImage };
