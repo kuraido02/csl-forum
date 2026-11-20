@@ -4,7 +4,12 @@ const requireAuth = require("../middleware/requireAuth");
 const requireModerator = require("../middleware/requireModerator");
 const formatPost = require("../utils/formatPost");
 const { formatReview } = formatPost;
-const { POST_SELECT, findLatestReviews, findDepartmentsById } = require("../utils/posts");
+const {
+  POST_SELECT,
+  findPostById,
+  findLatestReviews,
+  findDepartmentsById,
+} = require("../utils/posts");
 const { sendError } = require("../utils/http");
 
 const router = express.Router();

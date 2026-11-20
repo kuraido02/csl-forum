@@ -473,6 +473,7 @@ The moderation queue.
 Full post (with `body`, `department` and `review`) for a post in the moderator's department.
 - `200` → `{ "post": { ...post } }`
 - `404 NOT_FOUND` (not in your department, or does not exist)
+- `403 FORBIDDEN` (not a moderator or admin)
 
 ### PATCH `/moderation/posts/:id` 🔒🧑‍⚖️
 ```json
