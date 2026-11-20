@@ -18,6 +18,31 @@ const router = express.Router();
 const PAGE_SIZE = 20;
 const POST_STATUSES = ["pending", "approved", "rejected"];
 
+// Loads the post for a moderator route, or sends the right error and returns null.
+// A moderator can only reach posts of THEIR department; for any other post we
+// answer 404, so they can't tell it exists. Admins can reach every department.
+async function loadPostForModerator(req, res) {
+  // The id must be a plain number, otherwise there is no such post
+  if (!/^\d+$/.test(req.params.id)) {
+    sendError(res, 404, "NOT_FOUND", "Post not found.");
+    return null;
+  }
+
+  // findPostById already skips deleted posts
+  const row = await findPostById(Number(req.params.id));
+  if (!row) {
+    sendError(res, 404, "NOT_FOUND", "Post not found.");
+    return null;
+  }
+
+  if (!req.moderator.isAdmin && row.department_id !== req.moderator.departmentId) {
+    sendError(res, 404, "NOT_FOUND", "Post not found.");
+    return null;
+  }
+
+  return row;
+}
+
 // The moderation queue. Moderators see their own department only; admins see all.
 router.get("/posts", requireAuth, requireModerator, async (req, res) => {
   try {
@@ -100,20 +125,8 @@ router.get("/posts", requireAuth, requireModerator, async (req, res) => {
 // Any status can be opened (pending, approved or rejected).
 router.get("/posts/:id", requireAuth, requireModerator, async (req, res) => {
   try {
-    // The id must be a plain number, otherwise there is no such post
-    if (!/^\d+$/.test(req.params.id)) {
-      return sendError(res, 404, "NOT_FOUND", "Post not found.");
-    }
-
-    // findPostById already skips deleted posts
-    const row = await findPostById(Number(req.params.id));
-    if (!row) return sendError(res, 404, "NOT_FOUND", "Post not found.");
-
-    // A moderator may only open posts routed to THEIR department.
-    // For any other department we answer 404, so they can't tell the post exists.
-    if (!req.moderator.isAdmin && row.department_id !== req.moderator.departmentId) {
-      return sendError(res, 404, "NOT_FOUND", "Post not found.");
-    }
+    const row = await loadPostForModerator(req, res);
+    if (!row) return;
 
     const reviews = await findLatestReviews([row.id]);
     const departments = await findDepartmentsById();
