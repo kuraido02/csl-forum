@@ -413,7 +413,7 @@ The five organization tags (academic classifications for posts). Login not requi
 - `201` → `{ "post": { ...post } }` with `"status": "pending"`
 - `400 VALIDATION_ERROR` (with `fields`, e.g. `fields.organizationId`, `fields.image`; also when none of `body`, `linkUrl`, `image` is given)
 - `403 SCHOOL_NOT_VERIFIED`, `403 PROFILE_INCOMPLETE`
-- `429 RATE_LIMITED`
+- `429 RATE_LIMITED` (more than 10 new posts in one hour per user; only successful posts count)
 
 ### GET `/posts?organization=BSCS&page=1` 🔒
 The homepage list: approved posts from everyone, newest published first.

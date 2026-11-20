@@ -11,6 +11,7 @@ const { sendError, sendValidationError } = require("../utils/http");
 const fs = require("fs");
 const path = require("path");
 const { detectImageType, postDir, removePostImage } = require("../utils/images");
+const { postLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
@@ -80,7 +81,7 @@ const createPostSchema = z.object({
   linkUrl: linkUrlRule,
 });
 
-router.post("/", requireAuth, readPostForm, async (req, res) => {
+router.post("/", requireAuth, postLimiter, readPostForm, async (req, res) => {
   try {
     // 1. Who is posting? Check the posting rules before anything else
     const author = await findFullUserById(req.user.id);
