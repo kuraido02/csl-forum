@@ -463,9 +463,11 @@ Rules for reviewing:
 
 ### GET `/moderation/posts?status=pending&page=1` 🔒🧑‍⚖️
 The moderation queue.
-- `status` is `pending` (default), `approved` or `rejected`. Pending is listed oldest first; others newest first.
-- Moderators get their own department's posts. Admins get all departments and may add `&department=CS` (a department `code`) to filter.
+- `status` is `pending` (default), `approved` or `rejected`. Pending is listed oldest first; approved and rejected are listed by most recent decision first.
+- Moderators get their own department's posts (a `department` parameter is ignored for them). Admins get all departments and may add `&department=CS` (a department `code`) to filter.
 - `200` → `{ "items": [ ...PostSummary with department and review ], "page": 1, "pageSize": 20, "total": 3 }`
+- `400 VALIDATION_ERROR` (`fields.status`: not one of the three; `fields.department`: unknown code)
+- `403 FORBIDDEN` (not a moderator or admin)
 
 ### GET `/moderation/posts/:id` 🔒🧑‍⚖️
 Full post (with `body`, `department` and `review`) for a post in the moderator's department.

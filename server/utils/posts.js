@@ -58,4 +58,11 @@ async function findLatestReviews(postIds) {
   return latest;
 }
 
-module.exports = { POST_SELECT, findPostById, findLatestReviews };
+// All five departments as a Map: id -> { id, code, name }.
+// Only five rows, so one tiny query covers a whole page of posts.
+async function findDepartmentsById() {
+  const [rows] = await db.query("SELECT id, code, name FROM departments");
+  return new Map(rows.map((row) => [row.id, { id: row.id, code: row.code, name: row.name }]));
+}
+
+module.exports = { POST_SELECT, findPostById, findLatestReviews, findDepartmentsById };
