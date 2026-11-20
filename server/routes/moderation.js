@@ -95,4 +95,38 @@ router.get("/posts", requireAuth, requireModerator, async (req, res) => {
   }
 });
 
+// One post for a moderator: the full post with department and latest review.
+// Any status can be opened (pending, approved or rejected).
+router.get("/posts/:id", requireAuth, requireModerator, async (req, res) => {
+  try {
+    // The id must be a plain number, otherwise there is no such post
+    if (!/^\d+$/.test(req.params.id)) {
+      return sendError(res, 404, "NOT_FOUND", "Post not found.");
+    }
+
+    // findPostById already skips deleted posts
+    const row = await findPostById(Number(req.params.id));
+    if (!row) return sendError(res, 404, "NOT_FOUND", "Post not found.");
+
+    // A moderator may only open posts routed to THEIR department.
+    // For any other department we answer 404, so they can't tell the post exists.
+    if (!req.moderator.isAdmin && row.department_id !== req.moderator.departmentId) {
+      return sendError(res, 404, "NOT_FOUND", "Post not found.");
+    }
+
+    const reviews = await findLatestReviews([row.id]);
+    const departments = await findDepartmentsById();
+
+    res.json({
+      post: formatPost(row, {
+        department: departments.get(row.department_id),
+        review: formatReview(reviews.get(row.id), { includeModerator: true }),
+      }),
+    });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
