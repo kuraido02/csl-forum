@@ -18,6 +18,7 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api", require("./routes/verification"));
 app.use("/api", require("./routes/reference"));
 app.use("/api/posts", require("./routes/posts"));
+app.use("/api/moderation", require("./routes/moderation"));
 
 // Test route: checks that the server can talk to MySQL
 app.get("/api/health", async (req, res) => {
