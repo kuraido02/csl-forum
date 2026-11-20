@@ -482,11 +482,13 @@ Full post (with `body`, `department` and `review`) for a post in the moderator's
 - `decision`: `"approved"` or `"rejected"` (required).
 - `organizationId` (optional): a corrected tag. If omitted, the tag stays.
 - `note` (optional, up to 500 chars). Recommended for rejections: the author sees it.
-- `200` → `{ "post": { ...post } }` with the new `status`
-- `400 VALIDATION_ERROR`
-- `403 FORBIDDEN` (other department)
-- `404 NOT_FOUND`
+- `200` → `{ "post": { ...post } }` with the new `status`, the `department` and the latest `review`
+- `400 VALIDATION_ERROR` (`fields.decision`: missing or not `approved`/`rejected`; `fields.organizationId`: unknown organization; `fields.note`: over 500 characters)
+- `403 FORBIDDEN` (not a moderator or admin)
+- `404 NOT_FOUND` (missing, deleted, or in another department, so its existence stays private)
 - `409 CONFLICT` (the post is not pending)
+- A corrected organization tag never changes the moderating department. The department is fixed by the author's course.
+- The decision and its record (reviewer, time, tag before and after, note) are saved together, or not at all.
 
 Approving sets `status: "approved"` and, the first time, `publishedAt`.
 

@@ -10,7 +10,8 @@ const {
   findLatestReviews,
   findDepartmentsById,
 } = require("../utils/posts");
-const { sendError } = require("../utils/http");
+const { z } = require("zod");
+const { sendError, sendValidationError } = require("../utils/http");
 
 const router = express.Router();
 
