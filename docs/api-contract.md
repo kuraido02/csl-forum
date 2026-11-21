@@ -509,6 +509,7 @@ Approving sets `status: "approved"` and, the first time, `publishedAt`.
   ]
 }
 ```
+- `403 FORBIDDEN` (not an admin)
 
 ### PUT `/admin/departments/:departmentId/moderators/:office` 🔒🛡️
 `:office` is `president` or `vice_president`. Assigns the person (replacing whoever held the office).
