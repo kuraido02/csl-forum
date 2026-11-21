@@ -518,8 +518,11 @@ Approving sets `status: "approved"` and, the first time, `publishedAt`.
 ```
 - `200` → the department entry, as in the list above
 - `400 VALIDATION_ERROR` with `fields.username`: no such user, the account is not active, not email-verified, not school-verified, or their registered course does not belong to this department
+- `403 FORBIDDEN` (not an admin)
 - `404 NOT_FOUND` (department or office)
 - `409 CONFLICT` (the user already holds another office)
+- Assigning the person who already holds this office changes nothing and returns `200`.
+- Whoever held the office before loses their moderator powers right away.
 
 ### DELETE `/admin/departments/:departmentId/moderators/:office` 🔒🛡️
 Vacates the office.
