@@ -526,8 +526,10 @@ Approving sets `status: "approved"` and, the first time, `publishedAt`.
 
 ### DELETE `/admin/departments/:departmentId/moderators/:office` 🔒🛡️
 Vacates the office.
-- `204`
-- `404 NOT_FOUND`
+- `204` (no body). The office is now empty.
+- `403 FORBIDDEN` (not an admin)
+- `404 NOT_FOUND` (unknown department or office, or nobody holds that office)`
+- The person who held the office loses their moderator powers right away. Their posts and past decisions are not changed.
 
 Moderators can be a normal student account: their `role` stays `student`, and the `moderator` field on the `user` object says what they can do.
 

@@ -134,4 +134,29 @@ router.put("/:departmentId/moderators/:office", requireAuth, requireAdmin, async
   }
 });
 
+// Vacate an office. The person simply stops being a moderator.
+router.delete("/:departmentId/moderators/:office", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    // Is the department and office in the URL real?
+    const target = await loadDepartmentAndOffice(req, res);
+    if (!target) return;
+    const { departmentId, office } = target;
+
+    const [result] = await db.query(
+      "DELETE FROM department_moderators WHERE department_id = ? AND office = ?",
+      [departmentId, office]
+    );
+
+    // Nothing was deleted: the office was already empty
+    if (result.affectedRows === 0) {
+      return sendError(res, 404, "NOT_FOUND", "Nobody holds this office.");
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 module.exports = router;
