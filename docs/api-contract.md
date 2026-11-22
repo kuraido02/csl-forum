@@ -288,6 +288,8 @@ Delete own account (soft delete). Requires password.
 Approved posts written by that user, newest first (the profile's Posts tab).
 - `200` → `{ "items": [ ...PostSummary ], "page": 1, "pageSize": 20, "total": 3 }`
 - `404 NOT_FOUND` (same rule as the public profile)
+- Only `approved` posts that are not deleted appear. Pending and rejected posts are never listed here (the author sees them in `GET /posts/mine`).
+- If the author's account was deleted, this endpoint returns `404` (the profile no longer exists). Their approved posts stay on the homepage, shown as written by `[deleted]`.
 
 ### GET `/users/:username/comments`  *(stub until Phase 3)*
 Returns an empty list until comments exist:

@@ -11,6 +11,8 @@ const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const { cookieOptions } = require("../utils/cookies");
 const { removePostImage } = require("../utils/images");
+const formatPost = require("../utils/formatPost");
+const { POST_SELECT } = require("../utils/posts");
 
 const router = express.Router();
 
