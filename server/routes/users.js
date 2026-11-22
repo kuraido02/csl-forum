@@ -377,7 +377,52 @@ async function sendEmptyList(req, res) {
   }
 }
 
-router.get("/:username/posts", sendEmptyList);
+const PROFILE_POSTS_PAGE_SIZE = 20;
+
+// The Posts tab of a profile: approved posts written by that user, newest published first
+router.get("/:username/posts", requireAuth, async (req, res) => {
+  try {
+    // The same rule as the public profile: deleted users and users who have
+    // not verified their email do not exist for everyone else
+    const [userRows] = await db.query(
+      `SELECT id FROM users
+       WHERE username = ? AND status <> 'deleted' AND email_verified_at IS NOT NULL
+       LIMIT 1`,
+      [req.params.username]
+    );
+    const profileUser = userRows[0];
+    if (!profileUser) return sendError(res, 404, "NOT_FOUND", "User not found.");
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+
+    // Only approved posts that are not deleted. Pending and rejected ones never show here.
+    const whereSql = "p.author_id = ? AND p.status = 'approved' AND p.deleted_at IS NULL";
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM posts p WHERE ${whereSql}`,
+      [profileUser.id]
+    );
+
+    const [rows] = await db.query(
+      `${POST_SELECT}
+       WHERE ${whereSql}
+       ORDER BY p.published_at DESC, p.id DESC
+       LIMIT ? OFFSET ?`,
+      [profileUser.id, PROFILE_POSTS_PAGE_SIZE, (page - 1) * PROFILE_POSTS_PAGE_SIZE]
+    );
+
+    res.json({
+      items: rows.map((row) => formatPost(row, { summary: true })),
+      page,
+      pageSize: PROFILE_POSTS_PAGE_SIZE,
+      total,
+    });
+  } catch (err) {
+    console.error(err);
+    sendError(res, 500, "SERVER_ERROR", "Something went wrong.");
+  }
+});
+
 router.get("/:username/comments", sendEmptyList);
 
 module.exports = router;
