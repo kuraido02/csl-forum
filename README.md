@@ -12,7 +12,7 @@ A school forum for students and teachers (thesis project).
 | Phase | What | Backend | Frontend |
 |---|---|---|---|
 | 1 | User and account foundation (register, login, profiles, school verification) | Done | In progress |
-| 2 | Core posting system, including moderation | Database in progress | Not started |
+| 2 | Core posting system, including moderation | Done (tested) | Not started |
 
 ---
 
@@ -42,13 +42,13 @@ code .
      ```
      & "C:\xampp\mysql\bin\mysql.exe" -u root -e "source server/db/schema.sql"
      ```
-3. Apply the Phase 2 posting and moderation migration once:
+3. Apply the Phase 2 posting and moderation migration **once** (running it a second time fails, because it alters the `profiles` table):
    ```
    & "C:\xampp\mysql\bin\mysql.exe" -u root csl_forum -e "source server/db/migrations/002_phase2_posting_moderation.sql"
    ```
 4. Check: `csl_forum` should contain the 4 Phase 1 tables plus `departments`, `courses`, `organizations`, `department_moderators`, `posts`, and `post_reviews`.
 
-The migration adds placeholder course, department, and organization names. Replace those with the official school names before production use. Existing profile `program` values are kept; assign each user a `course_id` before allowing posts.
+The migration adds placeholder course, department, and organization names. Replace those with the official school names before production use. Existing profile `program` values are kept but are no longer used by the API. Accounts created before Phase 2 have no course; they choose one in their profile (`PATCH /api/users/me`) before they can post.
 
 ## 4. Set up and run the server
 
@@ -119,12 +119,14 @@ csl-forum/
 ├── client/            React app (Vite)
 │   └── src/
 ├── server/
-│   ├── db/schema.sql  Database tables
-│   ├── middleware/    requireAuth, requireAdmin, rate limiters
-│   ├── routes/        auth, users, verification
+│   ├── db/
+│   │   ├── schema.sql     Phase 1 tables
+│   │   └── migrations/    Later database changes (run each one once, in order)
+│   ├── middleware/    requireAuth, requireAdmin, requireModerator, rate limiters
+│   ├── routes/        auth, users, verification, reference, posts, moderation, adminDepartments
 │   ├── scripts/       makeAdmin.js
-│   ├── utils/         helpers (errors, emails, tokens, cookies, ...)
-│   ├── uploads/       Uploaded avatars (created automatically, not in Git)
+│   ├── utils/         helpers (errors, emails, tokens, cookies, posts, images, ...)
+│   ├── uploads/       Uploaded avatars and post images (created automatically, not in Git)
 │   ├── db.js          MySQL connection
 │   └── index.js       Server entry point
 └── docs/
@@ -136,13 +138,15 @@ csl-forum/
 - Login uses an **httpOnly cookie**. Send `credentials: "include"` (fetch) or `withCredentials: true` (axios) on **every** request, or the cookie is not sent.
 - You cannot read the cookie. To know who is logged in, call `GET /api/auth/me` when the app loads.
 - Every error has the same shape: `{ "error": { "code", "message", "fields?" } }`. Show `message` to the user and use `fields` to mark inputs.
-- Show avatars as `http://localhost:3000` + `avatarUrl`.
+- Show avatars as `http://localhost:3000` + `avatarUrl`. Post images work the same way (`http://localhost:3000` + `imageUrl`).
+- Creating or editing a post with an image is a **multipart form** (field name `image`), not JSON. Do not set the `Content-Type` header yourself; the browser adds it with the boundary.
+- Three things are separate: the author's **course** (chosen at registration), the post's **organization tag** (chosen by the author, can be corrected by a moderator) and the **moderating department** (chosen by the server from the author's course). The frontend never sends a department.
 - In development, React can run an effect twice. The verify-email page may call the API twice with the same token; the second call returns `410`, which should not show an error after the first one succeeded.
 - You can build pages with fake data first, using the example responses in the contract, and connect to the real server later.
 
 ## Testing the API without the UI
 
-Use the **Thunder Client** extension in VS Code. Keep one saved request per endpoint. Before pressing Send, check the **method, URL and body** together, and remember that the login cookie is shared by all requests, so use `GET /api/auth/me` to see who you are logged in as.
+Use the **Thunder Client** extension in VS Code. Keep one saved request per endpoint. For requests with an image, use **Body > Form** and add the file under **Files** (field name `image`), not the JSON tab. Before pressing Send, check the **method, URL and body** together, and remember that the login cookie is shared by all requests, so use `GET /api/auth/me` to see who you are logged in as.
 
 ## Working together with Git
 
@@ -173,4 +177,3 @@ Then open a pull request on GitHub. Rules:
 | `429 RATE_LIMITED` | Too many attempts. Wait a few minutes, or restart the server to reset the counters |
 | `npm audit` warns about vulnerabilities | Safe to ignore for now. Do not run `npm audit fix --force` |
 | `.env` changes have no effect | Restart the server. Nodemon only restarts on code changes |
-
