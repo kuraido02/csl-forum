@@ -176,4 +176,4 @@ Then open a pull request on GitHub. Rules:
 | CORS error in the browser | Use `http://localhost:5173`, and check `CLIENT_URL` in `server/.env` |
 | `429 RATE_LIMITED` | Too many attempts. Wait a few minutes, or restart the server to reset the counters |
 | `npm audit` warns about vulnerabilities | Safe to ignore for now. Do not run `npm audit fix --force` |
-| `.env` changes have no effect | Restart the server. Nodemon only restarts on code changes |
+| `.env` changes have no effect | Restart the server. Nodemon only restarts on code changes | 
