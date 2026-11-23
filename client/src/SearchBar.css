@@ -1,0 +1,27 @@
+.search {
+  flex: 1;
+  position: auto;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.search-results {
+  position: absolute;
+  top: 45px;
+  width: 40%;
+  background: #FFFFFF;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.search-results div {
+  padding: 10px 10px;
+  color: #000000;
+}
+
+.search-results div:hover {
+  background: #FFFFFF;
+  color: #000000;
+}

@@ -19,7 +19,7 @@ body {
 }
 
 .logo {
-  color: #FFFFFF;
+  color: #D4AF37;
   font-size: 25px;
 }
 
@@ -39,8 +39,8 @@ body {
   gap: 15px;
 }
 
-.login-btn,
-.register-btn {
+.login-btn
+.signup-btn {
   padding: 10px 20px;
   text-decoration: none;
   border-radius: 5px;
@@ -51,8 +51,7 @@ body {
   color: #800000;
 }
 
-.register-btn {
+.signup-btn {
   color: #FFFFFF;
   border: 1px solid #FFFFFF;
 }
-

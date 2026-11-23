@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/kuraido02/csl-forum/issues"
   },
-  "homepage": "https://github.com/kuraido02/csl-forum#readme"
+  "homepage": "https://github.com/kuraido02/csl-forum#readme",
+  "dependencies": {
+    "vite": "^8.3.8"
+  }
 }
