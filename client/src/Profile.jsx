@@ -5,36 +5,41 @@ import { Link } from "react-router-dom";
 function Profile({ user }) {
   const [tab, setTab] = useState("posts");
 
-  const isVerified = user.schoolVerified || user.teacherStatus === "approved";
-  const joined = new Date(user.created).toLocaleDateString();
+  // The contract puts display name, bio, avatar and course inside user.profile.
+  const profile = user.profile || {};
+  const name = profile.displayName || user.username;
+  const joined = new Date(user.createdAt).toLocaleDateString();
 
   return (
     <main className="profile-page">
       <div className="profile-card">
         <div className="profile-top">
-         
           <div className="avatar big">
-            {user.avatar ? <img src={user.avatar} alt="" /> : user.name[0].toUpperCase()}
+            {profile.avatarUrl ? (
+              <img src={"http://localhost:3000" + profile.avatarUrl} alt="" />
+            ) : (
+              name[0].toUpperCase()
+            )}
           </div>
 
           <div className="profile-info">
-            <h1>{user.name}</h1>
+            <h1>{name}</h1>
             <small>u/{user.username}</small>
             <p>
               <span className="badge">{user.role === "teacher" ? "Teacher" : "Student"}</span>
-              <span className={isVerified ? "badge ok" : "badge warn"}>
-                {isVerified ? "Verified" : "Not verified"}
+              <span className={user.schoolVerified ? "badge ok" : "badge warn"}>
+                {user.schoolVerified ? "Verified" : "Not verified"}
               </span>
-              {!user.emailVerified && <Link to="/verify" className="badge warn">Verify email</Link>}
             </p>
           </div>
 
           <Link to="/edit-profile" className="btn outline">Edit profile</Link>
         </div>
 
-        <p>{user.bio || "No bio yet."}</p>
+        <p>{profile.bio || "No bio yet."}</p>
         <small>
-          {user.school && user.school + " • "}
+          {profile.course && profile.course.name + " • "}
+          {profile.yearLevel && "Year " + profile.yearLevel + " • "}
           Joined {joined}
         </small>
       </div>
