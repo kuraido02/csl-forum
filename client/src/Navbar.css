@@ -1,57 +1,99 @@
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* The bar: sticky at the top, maroon with a thin gold line under it */
+.tv-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--nav-bg);
+  border-bottom: 3px solid var(--gold);
 }
 
-body {
-  background-color: #F5F5F5;
-}
-
-.navbar {
-  width: 100%;
+/* flex-wrap lets the search bar drop to its own row on phones */
+.tv-nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 16px;
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 20px 50px;
-  background-color: #800000;
+  gap: 8px 12px;
 }
 
-.logo {
-  color: #D4AF37;
-  font-size: 25px;
+.tv-logo { display: flex; align-items: center; margin-right: auto; }
+.tv-logo img { height: 30px; width: auto; display: block; }
+
+.tv-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Phone: search takes the full second row (order: 3 puts it last) */
+.tv-search { order: 3; flex: 1 1 100%; }
+
+/* Buttons and links */
+.tv-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+.tv-link { color: #fff; font-weight: 500; padding: 6px 4px; }
+.tv-pill {
+  background: var(--gold);
+  color: #3a0000;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 999px;
 }
 
-.nav-links {
+/* Avatar and its dropdown menu */
+.tv-menu { position: relative; }
+.tv-avatar-btn { background: none; border: 0; padding: 0; cursor: pointer; }
+.tv-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #3a0000;
   display: flex;
-  list-style: none;
-  gap: 30px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  overflow: hidden;
 }
+.tv-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.nav-links a {
-  color: #FFFFFF;
-  text-decoration: none;
-}
-
-.nav-buttons {
+.tv-dropdown {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  min-width: 190px;
   display: flex;
-  gap: 15px;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
-
-.login-btn
-.signup-btn {
-  padding: 10px 20px;
-  text-decoration: none;
-  border-radius: 5px;
+.tv-dropdown a,
+.tv-dropdown button {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+.tv-dropdown a:hover,
+.tv-dropdown button:hover { background: var(--bg); }
 
-.login-btn {
-  background-color: #D4AF37;
-  color: #800000;
-}
-
-.signup-btn {
-  color: #FFFFFF;
-  border: 1px solid #FFFFFF;
+/* Tablet and desktop: everything on one row */
+@media (min-width: 720px) {
+  .tv-logo { margin-right: 0; }
+  .tv-search { order: 0; flex: 1 1 auto; max-width: 420px; }
+  .tv-actions { margin-left: auto; }
 }

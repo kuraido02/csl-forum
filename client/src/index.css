@@ -1,28 +1,22 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-  font-family: Arial, sans-serif;
-  background: #F5F5F5;
-  color: #000000;
-}
-
-a { color: inherit; text-decoration: none; }
-
 input {
   width: 100%;
   padding: 10px 16px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 20px;
-  background: #FFFFFF;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
 }
-input:focus { border-color: #800000; outline: none; }
+input:focus { border-color: var(--accent); outline: none; }
 
 .btn {
   padding: 10px 20px;
-  border: 1px solid #800000;
-  border-radius: 5px;
-  background: #800000;
-  color: #FFFFFF;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-weight: bold;
   cursor: pointer;
 }
