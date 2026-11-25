@@ -48,3 +48,5 @@ function SchoolVerification({ user, setUser }) {
         </main>
     );
 }
+
+export default SchoolVerification;

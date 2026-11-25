@@ -1,7 +1,7 @@
 import "./Profile.css";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { updateUser, deleteUser, emailTakenByOther } from "./Auth";
+import { updateUser, deleteUser, emailTakenByOther } from "./auth";
 
 function Settings({ user, setUser }) {
   const [email, setEmail] = useState(user.email);

@@ -1,6 +1,6 @@
 import "./Login.css";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login } from "./auth";
 
 function Login({ setUser }) {
@@ -9,18 +9,17 @@ function Login({ setUser }) {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-
-    const result = login({ email, password });
-    if (result.error) {
-      setError(result.error);
-      return;
-    } 
-
-      setUser(result.user);
+    setError("");
+    try {
+      const user = await login(email, password);
+      setUser(user);
       navigate("/profile");
+    } catch (err) {
+      setError(err.message); // the server's message, e.g. wrong password
     }
+  }
 
   return (
     <form className="login" onSubmit={handleSubmit}>
