@@ -44,4 +44,7 @@ function SchoolVerification({ user, setUser }) {
 
                 <input type="email" placeholder="School email (name@school.edu)" value={email}
                     onChange={(e) => setEmail(e.target.value)} required />
-                    
+            </form>
+        </main>
+    );
+}
