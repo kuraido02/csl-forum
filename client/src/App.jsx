@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { getCurrentUser } from "./auth";
 import Navbar from "./Navbar";
@@ -15,7 +15,19 @@ import Settings from "./Settings";
 function App() {
   // "user" is the logged-in user, or null if nobody is logged in.
   // We pass it down to the pages as props.
-  const [user, setUser] = useState(getCurrentUser());
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Runs once when the app opens: ask the server who is logged in.
+  useEffect(() => {
+    getCurrentUser().then((u) => {
+      setUser(u);
+      setLoading(false);
+    });
+  }, []);
+
+  // Don't draw the routes yet, or a logged-in person would be sent to /login.
+  if (loading) return <p>Loading...</p>;
 
   return (
     <>
