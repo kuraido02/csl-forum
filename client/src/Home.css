@@ -6,21 +6,23 @@
 
 .create-post { margin-bottom: 12px; }
 
+/* Post card: themed colors, accent strip on the left, softer corners */
 .post {
   margin-bottom: 10px;
   padding: 12px;
-  background: #FFFFFF;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
 }
 
-.post small { color: #7c7c7c; }
+.post small { color: var(--text-muted); }
 
 .post h2 {
   font-size: 18px;
   margin: 4px 0 10px;
-  color: #000000;
-  font-weight: normal;
+  color: var(--text);
+  font-weight: 500;
 }
 
 .actions { display: flex; gap: 10px; }
@@ -29,14 +31,14 @@
   padding: 6px 12px;
   border: none;
   border-radius: 20px;
-  background: #F5F5F5;
+  background: var(--bg);
   font-weight: bold;
-  color: #7c7c7c;
+  color: var(--text-muted);
   cursor: pointer;
 }
 
-.actions button:hover { background: #eee; }
-.actions button.liked { color: #800000; }
+.actions button:hover { background: var(--border); }
+.actions button.liked { color: var(--accent); }
 
 .comments { margin-top: 10px; }
 .comments form { margin-bottom: 8px; }
@@ -44,7 +46,7 @@
 .comment {
   margin-bottom: 8px;
   padding: 8px 12px;
-  background: #F5F5F5;
+  background: var(--bg);
   border-radius: 10px;
 }
 
@@ -57,11 +59,11 @@
   background: none;
   font-size: 12px;
   font-weight: normal;
-  color: #7c7c7c;
+  color: var(--text-muted);
   cursor: pointer;
 }
 
-.comment-actions button:hover { background: #e5e5e5; }
-.comment-actions button.liked { color: #800000; }
+.comment-actions button:hover { background: var(--border); }
+.comment-actions button.liked { color: var(--accent); }
 
 .replies { margin-left: 20px; margin-top: 6px; }

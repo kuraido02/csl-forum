@@ -1,27 +1,23 @@
-.search {
-  flex: 1;
-  position: auto;
-  max-width: 400px;
-  margin: 0 auto;
-}
+/* The wrapper in Navbar controls the width; this just anchors the dropdown */
+.search { position: relative; width: 100%; }
 
 .search-results {
   position: absolute;
-  top: 45px;
-  width: 40%;
-  background: #FFFFFF;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
+  top: 46px;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 .search-results div {
-  padding: 10px 10px;
-  color: #000000;
+  padding: 10px 14px;
+  color: var(--text);
+  cursor: pointer;
 }
 
-.search-results div:hover {
-  background: #FFFFFF;
-  color: #000000;
-}
+.search-results div:hover { background: var(--bg); }
