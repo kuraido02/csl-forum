@@ -24,7 +24,7 @@ function Login({ setUser }) {
   return (
     <form className="login" onSubmit={handleSubmit}>
       <h1>Log In</h1>
-      <input type="email" placeholder="Username or Email" value={email}
+      <input type="text" placeholder="Username or Email" value={email}
         onChange={(e) => setEmail(e.target.value)} required />
       <input type="password" placeholder="Password" value={password}
         onChange={(e) => setPassword(e.target.value)} required />

@@ -2,19 +2,50 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 350px;
-  margin: 60px auto;
-  padding: 30px;
-  text-align: center;
-  background: #FFFFFF;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: calc(100% - 24px);
+  max-width: 380px;
+  margin: 24px auto;
+  padding: 28px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-.signup h1 { 
-  color: #800000; }
-  
-.signup a {
-  color: #800000;
-  font-weight: bold;
+.signup h1 { text-align: center; color: var(--accent); }
+.signup p { text-align: center; }
+
+.signup a { color: var(--accent); font-weight: bold; }
+/* The "Go to Log In" link is styled as a button, so it needs its own text color */
+.signup a.btn { display: block; text-align: center; color: var(--accent-contrast); }
+
+.signup label { font-size: 13px; color: var(--text-muted); margin-bottom: -6px; }
+
+.signup select {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
 }
+.signup select:focus { border-color: var(--accent); outline: none; }
+
+/* School year and year level side by side */
+.signup .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.signup .row label { display: block; margin-bottom: 6px; }
+
+.signup .field-error { color: #d64545; font-size: 13px; text-align: left; margin-top: -6px; }
+.signup .hint { color: var(--text-muted); font-size: 12px; text-align: left; margin-top: -6px; }
+.signup .error {
+  padding: 8px 12px;
+  border: 1px solid #d64545;
+  border-radius: 8px;
+  background: rgba(214, 69, 69, 0.12);
+  color: #d64545;
+  font-size: 14px;
+  text-align: left;
+}
+
+.signup .btn:disabled { opacity: 0.6; cursor: not-allowed; }

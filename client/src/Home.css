@@ -12,7 +12,6 @@
   padding: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
   border-radius: var(--radius);
 }
 

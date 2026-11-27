@@ -57,6 +57,12 @@ export async function signup(fields) {
   return data.user;
 }
 
+// Gets the 5 courses for the sign-up dropdown (no login needed).
+export async function getCourses() {
+  const data = await request("/courses");
+  return data.items;
+}
+
 export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }

@@ -2,18 +2,26 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: calc(100% - 24px);
   max-width: 350px;
   margin: 60px auto;
   padding: 30px;
   text-align: center;
-  background: #FFFFFF;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-.login h1 { color: #000000; }
+.login h1 { color: var(--accent); }
+.login a { color: var(--accent); font-weight: bold; }
 
-.login a {
-  color: #800000;
-  font-weight: bold;
-}   
+.login .error {
+  padding: 8px 12px;
+  border: 1px solid #d64545;
+  border-radius: 8px;
+  background: rgba(214, 69, 69, 0.12);
+  color: #d64545;
+  font-size: 14px;
+  text-align: left;
+}
