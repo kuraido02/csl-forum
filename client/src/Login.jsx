@@ -2,6 +2,7 @@ import "./Login.css";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "./auth";
+import PasswordInput from "./PasswordInput";
 
 function Login({ setUser }) {
   const [email, setEmail] = useState("");
@@ -26,8 +27,9 @@ function Login({ setUser }) {
       <h1>Log In</h1>
       <input type="text" placeholder="Username or Email" value={email}
         onChange={(e) => setEmail(e.target.value)} required />
-      <input type="password" placeholder="Password" value={password}
-        onChange={(e) => setPassword(e.target.value)} required />
+      <PasswordInput placeholder="Password" value={password}
+      onChange={(e) => setPassword(e.target.value)} required
+      autoComplete="current-password" />
 
       {error && <p className="error">{error}</p>}
 

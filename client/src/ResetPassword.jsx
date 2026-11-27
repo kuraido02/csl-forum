@@ -2,6 +2,7 @@ import "./ForgotPassword.css";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { resetPassword } from "./auth";
+import PasswordInput from "./PasswordInput";
 
 function ResetPassword() {
   const [params] = useSearchParams();
@@ -67,10 +68,10 @@ function ResetPassword() {
   return (
     <form className="forgot" onSubmit={handleSubmit}>
       <h1>Choose a New Password</h1>
-      <input type="password" placeholder="New Password" value={password}
-        onChange={(e) => setPassword(e.target.value)} required />
-      <input type="password" placeholder="Confirm New Password" value={confirm}
-        onChange={(e) => setConfirm(e.target.value)} required />
+      <PasswordInput placeholder="New Password" value={password}
+        onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+      <PasswordInput placeholder="Confirm New Password" value={confirm}
+        onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
       {error && <p className="error">{error}</p>}
       <button className="btn" disabled={saving}>
         {saving ? "Saving..." : "Reset Password"}

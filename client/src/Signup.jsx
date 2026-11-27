@@ -2,6 +2,7 @@ import "./Signup.css";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { signup, getCourses } from "./auth";
+import PasswordInput from "./PasswordInput";
 
 // The school year starts around June. Offer the current one and 3 earlier ones.
 const startYear =
@@ -129,12 +130,12 @@ function Signup() {
         onChange={update} required />
       <FieldError message={fieldErrors.email} />
 
-      <input name="password" type="password" placeholder="Password" value={form.password}
-        onChange={update} required />
+      <PasswordInput name="password" placeholder="Password" value={form.password}
+      onChange={update} required autoComplete="new-password" />
       <FieldError message={fieldErrors.password} />
 
-      <input name="confirm" type="password" placeholder="Confirm Password" value={form.confirm}
-        onChange={update} required />
+      <PasswordInput name="confirm" placeholder="Confirm Password" value={form.confirm}
+      onChange={update} required autoComplete="new-password" />
       <FieldError message={fieldErrors.confirm} />
 
       <label htmlFor="role">I am a</label>
