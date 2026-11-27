@@ -63,6 +63,21 @@ export async function getCourses() {
   return data.items;
 }
 
+// Confirms the email using the token from the link in the email.
+export async function verifyEmail(token) {
+  await postJson("/auth/verify-email", { token });
+}
+
+// Asks for a new verification link. The server always answers the same message.
+export async function resendVerification(email) {
+  await postJson("/auth/resend-verification", { email });
+}
+
+// Sets a new password using the token from the reset-password email.
+export async function resetPassword(token, newPassword) {
+  await postJson("/auth/reset-password", { token, newPassword });
+}
+
 export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }

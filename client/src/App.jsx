@@ -8,6 +8,7 @@ import Signup from "./Signup";
 import ForgotPassword from "./ForgotPassword";
 import Verify from "./Verify";
 import VerifyEmail from "./VerifyEmail";
+import ResetPassword from "./ResetPassword";
 import Profile from "./Profile";
 import EditProfile from "./EditProfile";
 import SchoolVerification from "./SchoolVerification";
@@ -40,6 +41,7 @@ function App() {
         <Route path="/login" element={user ? <Navigate to="/profile" /> : <Login setUser={setUser} />} />
         <Route path="/signup" element={user ? <Navigate to="/profile" /> : <Signup setUser={setUser} />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Pages only for logged-in people. If not logged in, go to /login */}
