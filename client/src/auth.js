@@ -78,6 +78,20 @@ export async function resetPassword(token, newPassword) {
   await postJson("/auth/reset-password", { token, newPassword });
 }
 
+// Sends a school verification request (school ID number + optional note).
+export async function submitVerificationRequest(schoolIdNumber, note) {
+  const body = { schoolIdNumber };
+  if (note) body.note = note; // the note is optional: leave it out when empty
+  const data = await postJson("/verification-requests", body);
+  return data.request; // { id, status: "pending", createdAt }
+}
+
+// Gets the latest request of the logged-in user, or null if never sent.
+export async function getMyVerificationRequest() {
+  const data = await request("/verification-requests/me");
+  return data.request;
+}
+
 export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }
