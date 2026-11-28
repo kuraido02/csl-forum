@@ -1,110 +1,177 @@
 import "./Home.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { getPosts, getOrganizations, fileUrl } from "./auth";
 
-const posts = [
-  { id: 1, community: "webdev", author: "maria", title: "How do you structure a React project as it grows?", likes: 128 },
-  { id: 2, community: "javascript", author: "juan", title: "Closures finally clicked for me today", likes: 76 },
-  { id: 3, community: "css", author: "ana", title: "Flexbox vs Grid: when do you pick which?", likes: 54 },
-];
+// "https://www.youtube.com/watch?v=1" -> "youtube.com"
+function domainOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
 
-// A small form used for both new comments and replies
-function CommentForm({ placeholder, onSubmit }) {
-  const [text, setText] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    onSubmit(text);
-    setText("");
-  };
+// The author's name and avatar, with a small card that opens on hover or tap.
+function Author({ author }) {
+  // A deleted account has no username: the contract shows it as [deleted].
+  if (!author || !author.username) {
+    return <span className="fd-name">[deleted]</span>;
+  }
+  const avatar = fileUrl(author.avatarUrl);
+  const who = author.displayName || author.username;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        placeholder={placeholder}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-    </form>
+    // tabIndex={0} lets a tap or the keyboard focus it, which opens the card on phones
+    <span className="fd-author" tabIndex={0}>
+      <span className="fd-avatar">
+        {avatar ? <img src={avatar} alt="" /> : who[0].toUpperCase()}
+      </span>
+      <span className="fd-name">{who}</span>
+
+      <span className="fd-hover">
+        <strong>{who}</strong>
+        <span>u/{author.username}</span>
+        {author.course && <span>{author.course.code} — {author.course.name}</span>}
+        {author.schoolYear && <span>S.Y. {author.schoolYear}</span>}
+        {author.yearLevel && <span>Year {author.yearLevel}</span>}
+      </span>
+    </span>
   );
 }
 
-function Comment({ comment, onDelete }) {
-  const [liked, setLiked] = useState(false);
-  const [replying, setReplying] = useState(false);
-  const [replies, setReplies] = useState([]);
-
-  const addReply = (text) => {
-    setReplies([...replies, { id: Date.now(), text }]);
-    setReplying(false);
-  };
-
-  const deleteReply = (id) => setReplies(replies.filter((r) => r.id !== id));
+function PostCard({ post }) {
+  const image = fileUrl(post.imageUrl);
+  const when = new Date(post.publishedAt || post.createdAt).toLocaleDateString();
 
   return (
-    <div className="comment">
-      <p>{comment.text}</p>
-
-      <div className="comment-actions">
-        <button className={liked ? "liked" : ""} onClick={() => setLiked(!liked)}>
-          {liked ? "❤️" : "🤍"} {liked ? 1 : 0}
-        </button>
-        <button onClick={() => setReplying(!replying)}>Reply</button>
-        <button onClick={() => onDelete(comment.id)}>Delete</button>
+    <article className="fd-post">
+      <div className="fd-meta">
+        <Author author={post.author} />
+        <span>•</span>
+        <span>{when}</span>
+        <span className="fd-pill">{post.organization.code}</span>
       </div>
 
-      {replying && <CommentForm placeholder="Write a reply..." onSubmit={addReply} />}
-
-      <div className="replies">
-        {replies.map((r) => (
-          <Comment key={r.id} comment={r} onDelete={deleteReply} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Post({ post }) {
-  const [liked, setLiked] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState([]);
-
-  const addComment = (text) => setComments([...comments, { id: Date.now(), text }]);
-  const deleteComment = (id) => setComments(comments.filter((c) => c.id !== id));
-
-  return (
-    <div className="post">
-      <small>c/{post.community} • Posted by u/{post.author}</small>
       <h2>{post.title}</h2>
 
-      <div className="actions">
-        <button className={liked ? "liked" : ""} onClick={() => setLiked(!liked)}>
-          {liked ? "❤️" : "🤍"} {post.likes + (liked ? 1 : 0)}
-        </button>
-        <button onClick={() => setShowComments(!showComments)}>
-          💬 {comments.length} Comments
-        </button>
-      </div>
-
-      {showComments && (
-        <div className="comments">
-          <CommentForm placeholder="Write a comment..." onSubmit={addComment} />
-          {comments.map((c) => (
-            <Comment key={c.id} comment={c} onDelete={deleteComment} />
-          ))}
-        </div>
+      {post.excerpt && (
+        <p className="fd-excerpt">
+          {post.excerpt}{post.excerpt.length >= 300 ? "…" : ""}
+        </p>
       )}
-    </div>
+
+      {image && <img className="fd-image" src={image} alt="" />}
+
+      {post.linkUrl && (
+        <a className="fd-link" href={post.linkUrl} target="_blank" rel="noopener noreferrer">
+          🔗 {domainOf(post.linkUrl)}
+        </a>
+      )}
+    </article>
   );
 }
 
-function Home() {
+function Home({ user }) {
+  const loggedIn = Boolean(user);
+
+  const [organizations, setOrganizations] = useState([]);
+  const [organization, setOrganization] = useState(""); // "" means all
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState({ items: [], total: 0, pageSize: 20 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Load the organization pills once, when a logged-in user opens the page.
+  useEffect(() => {
+    if (!loggedIn) return;
+    getOrganizations().then(setOrganizations).catch(() => {});
+  }, [loggedIn]);
+
+  // Load the posts whenever the filter or the page changes.
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    let cancelled = false; // set to true when this request becomes out of date
+    setLoading(true);
+    setError("");
+
+    getPosts(organization, page)
+      .then((result) => { if (!cancelled) setData(result); })
+      .catch((err) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    // React runs this when the filter or page changes again. If the user taps
+    // two pills quickly, the slow answer of the first tap must not replace the
+    // answer of the second one.
+    return () => { cancelled = true; };
+  }, [loggedIn, organization, page]);
+
+  function changeOrganization(code) {
+    setOrganization(code);
+    setPage(1); // a new filter starts on page 1
+  }
+
+  function goToPage(p) {
+    setPage(p);
+    window.scrollTo({ top: 0 });
+  }
+
+  // Guests: no request is sent, because the server would answer 401.
+  if (!loggedIn) {
+    return (
+      <main className="feed">
+        <div className="fd-welcome">
+          <h1>Kumusta! Welcome to TALAVYN</h1>
+          <p>The forum for our school's students and teachers. Log in to read and share posts.</p>
+          <div className="fd-actions">
+            <Link to="/login" className="btn">Log In</Link>
+            <Link to="/signup" className="btn outline">Sign Up</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const pages = Math.max(1, Math.ceil(data.total / data.pageSize));
+
   return (
-    <main className="container">
-      <input className="create-post" placeholder="Create Post" />
-      {posts.map((post) => (
-        <Post key={post.id} post={post} />
+    <main className="feed">
+      <div className="fd-filters">
+        <button className={organization === "" ? "active" : ""}
+          onClick={() => changeOrganization("")}>
+          All
+        </button>
+        {organizations.map((o) => (
+          <button key={o.id} title={o.name}
+            className={organization === o.code ? "active" : ""}
+            onClick={() => changeOrganization(o.code)}>
+            {o.code}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="error">{error}</p>}
+
+      {loading && <p className="fd-empty">Loading...</p>}
+
+      {!loading && !error && data.items.length === 0 && (
+        <p className="fd-empty">Wala pang posts dito.</p>
+      )}
+
+      {!loading && data.items.map((post) => (
+        <PostCard key={post.id} post={post} />
       ))}
+
+      {!loading && data.total > data.pageSize && (
+        <div className="fd-pager">
+          <button className="btn outline" disabled={page <= 1}
+            onClick={() => goToPage(page - 1)}>Previous</button>
+          <span>Page {page} of {pages}</span>
+          <button className="btn outline" disabled={page >= pages}
+            onClick={() => goToPage(page + 1)}>Next</button>
+        </div>
+      )}
     </main>
   );
 }

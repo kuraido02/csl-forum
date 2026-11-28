@@ -35,7 +35,7 @@ function App() {
     <>
       <Navbar user={user} setUser={setUser} />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home user={user} />} />
 
         {/* Pages for people who are NOT logged in */}
         <Route path="/login" element={user ? <Navigate to="/profile" /> : <Login setUser={setUser} />} />

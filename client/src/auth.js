@@ -160,3 +160,22 @@ export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }
 
+// Turns a path from the server (like "/uploads/posts/31.png") into a full address.
+// If the server address ever changes, this is the one place to fix.
+export function fileUrl(path) {
+  return path ? "http://localhost:3000" + path : null;
+}
+
+// Gets the organization tags (no login needed). Each has id, code, name, postCount.
+export async function getOrganizations() {
+  const data = await request("/organizations");
+  return data.items;
+}
+
+// Gets approved posts, newest first. organization = a code like "BSCS", or "" for all.
+// Returns { items, page, pageSize, total }. Needs a login.
+export async function getPosts(organization = "", page = 1) {
+  const params = new URLSearchParams({ page });
+  if (organization) params.set("organization", organization);
+  return request("/posts?" + params.toString());
+}
