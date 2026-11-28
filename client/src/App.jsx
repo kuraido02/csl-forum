@@ -6,7 +6,6 @@ import Home from "./Home";
 import Login from "./Login";
 import Signup from "./Signup";
 import ForgotPassword from "./ForgotPassword";
-import Verify from "./Verify";
 import VerifyEmail from "./VerifyEmail";
 import ResetPassword from "./ResetPassword";
 import Profile from "./Profile";
@@ -45,7 +44,6 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Pages only for logged-in people. If not logged in, go to /login */}
-        <Route path="/verify" element={user ? <Verify user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/login" />} />
         <Route path="/edit-profile" element={user ? <EditProfile user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/school" element={user ? <SchoolVerification user={user} setUser={setUser} /> : <Navigate to="/login" />} />

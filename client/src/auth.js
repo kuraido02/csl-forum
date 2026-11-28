@@ -116,23 +116,23 @@ export async function removeAvatar() {
   await request("/users/me/avatar", { method: "DELETE" });
 }
 
+// Changes the password of the logged-in user.
+// Errors come back as fields.currentPassword or fields.newPassword.
+export async function changePassword(currentPassword, newPassword) {
+  await postJson("/auth/change-password", { currentPassword, newPassword });
+}
+
+// Deletes the account (soft delete). The password is sent in the body.
+// On success the server answers 204 and clears the login cookie.
+export async function deleteAccount(password) {
+  await request("/users/me", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+}
+
 export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }
 
-// TEMPORARY: the backend has no endpoint for these two.
-// They exist only so the pages that import them can load.
-export async function emailExists() {
-  throw { code: "NOT_AVAILABLE", message: "emailExists has no backend endpoint." };
-}
-export async function updateUser() {
-  throw { code: "NOT_AVAILABLE", message: "updateUser has no backend endpoint." };
-}
-
-// TEMPORARY: Settings.jsx imports these, the backend needs other endpoints for them.
-export async function deleteUser() {
-  throw { code: "NOT_AVAILABLE", message: "deleteUser is not connected yet." };
-}
-export async function emailTakenByOther() {
-  throw { code: "NOT_AVAILABLE", message: "emailTakenByOther has no backend endpoint." };
-}

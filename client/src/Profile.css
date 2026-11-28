@@ -134,3 +134,21 @@ form.profile-card {
   cursor: pointer;
 }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Red button for dangerous actions (Delete account) */
+.btn.danger {
+  background: #d64545;
+  border-color: #d64545;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Green success message */
+.profile-card .success {
+  padding: 8px 12px;
+  border: 1px solid #3a9d5d;
+  border-radius: 8px;
+  background: rgba(58, 157, 93, 0.12);
+  color: #3a9d5d;
+  font-size: 14px;
+}
