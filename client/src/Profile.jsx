@@ -9,6 +9,7 @@ function Profile({ user }) {
   const profile = user.profile || {};
   const name = profile.displayName || user.username;
   const joined = new Date(user.createdAt).toLocaleDateString();
+  const roleLabel = { admin: "Admin", teacher: "Teacher", student: "Student" }[user.role] || "Student";
 
   return (
     <main className="profile-page">
@@ -26,7 +27,7 @@ function Profile({ user }) {
             <h1>{name}</h1>
             <small>u/{user.username}</small>
             <p>
-              <span className="badge">{user.role === "teacher" ? "Teacher" : "Student"}</span>
+              <span className="badge">{roleLabel}</span>
               <span className={user.schoolVerified ? "badge ok" : "badge warn"}>
                 {user.schoolVerified ? "Verified" : "Not verified"}
               </span>
