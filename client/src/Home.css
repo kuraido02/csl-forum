@@ -155,3 +155,5 @@
   color: #d64545;
   font-size: 14px;
 }
+
+.fd-post h2 a:hover { color: var(--accent); }

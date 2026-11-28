@@ -13,6 +13,7 @@ import EditProfile from "./EditProfile";
 import SchoolVerification from "./SchoolVerification";
 import Settings from "./Settings";
 import AdminVerifications from "./AdminVerifications";
+import PostPage from "./PostPage";
 
 function App() {
   // "user" is the logged-in user, or null if nobody is logged in.
@@ -49,6 +50,8 @@ function App() {
         <Route path="/edit-profile" element={user ? <EditProfile user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/school" element={user ? <SchoolVerification user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/settings" element={user ? <Settings user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+
+        <Route path="/posts/:id" element={user ? <PostPage /> : <Navigate to="/login" />} />
 
         <Route path="/admin/verifications" element={user && isAdmin(user) ? <AdminVerifications /> : <Navigate to="/" />} />
       </Routes>

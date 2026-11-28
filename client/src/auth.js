@@ -179,3 +179,10 @@ export async function getPosts(organization = "", page = 1) {
   if (organization) params.set("organization", organization);
   return request("/posts?" + params.toString());
 }
+
+// Gets one post with its full body. Needs a login.
+// The server answers 404 when the post is deleted or this user may not see it.
+export async function getPost(id) {
+  const data = await request(`/posts/${id}`);
+  return data.post;
+}

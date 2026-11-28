@@ -1,0 +1,68 @@
+.pp {
+  width: calc(100% - 20px);
+  max-width: 640px;
+  margin: 20px auto;
+}
+
+.pp-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pp-card {
+  margin-bottom: 12px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.pp-card h1 { margin: 10px 0; font-size: 24px; line-height: 1.25; }
+
+.pp-body {
+  white-space: pre-wrap;      /* keeps the author's line breaks */
+  overflow-wrap: anywhere;    /* long words and links don't break the layout */
+}
+
+/* The full image: the feed crops it, here it is shown whole */
+.pp .pp-image { max-height: none; object-fit: contain; }
+
+/* Status banners */
+.pp-banner {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.pp-banner.pending {
+  background: rgba(212, 166, 42, 0.15);
+  border: 1px solid var(--gold);
+}
+.pp-banner.rejected {
+  background: rgba(214, 69, 69, 0.12);
+  border: 1px solid #d64545;
+  color: #d64545;
+}
+
+.pp-review p { margin: 6px 0; overflow-wrap: anywhere; }
+.pp-review small, .pp-dept { color: var(--text-muted); }
+.pp-dept { display: block; text-align: center; }
+
+.pp-center { text-align: center; }
+.pp-center h1 { color: var(--accent); }
+.pp-center p { margin-bottom: 14px; color: var(--text-muted); }
+.pp-center .btn { display: inline-block; }
+
+.pp-state { padding: 40px 0; text-align: center; color: var(--text-muted); }
+
+.pp .error {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid #d64545;
+  border-radius: 8px;
+  background: rgba(214, 69, 69, 0.12);
+  color: #d64545;
+  font-size: 14px;
+}
