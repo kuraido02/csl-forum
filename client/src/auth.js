@@ -92,6 +92,30 @@ export async function getMyVerificationRequest() {
   return data.request;
 }
 
+// Saves only the profile fields that changed (displayName, bio, courseId, schoolYear, yearLevel).
+export async function updateProfile(changes) {
+  const data = await request("/users/me", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(changes),
+  });
+  return data.user;
+}
+
+// Uploads a photo as a multipart form. Returns the new avatarUrl.
+// No Content-Type header here: the browser adds it, with the boundary.
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append("avatar", file); // the field name must be "avatar"
+  const data = await request("/users/me/avatar", { method: "POST", body: formData });
+  return data.avatarUrl;
+}
+
+// Removes the photo (the profile goes back to the default avatar).
+export async function removeAvatar() {
+  await request("/users/me/avatar", { method: "DELETE" });
+}
+
 export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }
