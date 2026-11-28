@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { getCurrentUser } from "./auth";
+import { getCurrentUser, isAdmin } from "./auth";
 import Navbar from "./Navbar";
 import Home from "./Home";
 import Login from "./Login";
@@ -12,6 +12,7 @@ import Profile from "./Profile";
 import EditProfile from "./EditProfile";
 import SchoolVerification from "./SchoolVerification";
 import Settings from "./Settings";
+import AdminVerifications from "./AdminVerifications";
 
 function App() {
   // "user" is the logged-in user, or null if nobody is logged in.
@@ -48,6 +49,8 @@ function App() {
         <Route path="/edit-profile" element={user ? <EditProfile user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/school" element={user ? <SchoolVerification user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/settings" element={user ? <Settings user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+
+        <Route path="/admin/verifications" element={user && isAdmin(user) ? <AdminVerifications /> : <Navigate to="/" />} />
       </Routes>
     </>
   );

@@ -132,6 +132,30 @@ export async function deleteAccount(password) {
   });
 }
 
+// The one place that decides who is an admin. If the backend marks admins
+// differently, only this line changes.
+export function isAdmin(user) {
+  return user?.role === "admin";
+}
+
+// Admin: lists verification requests. status = "pending", "approved" or "rejected".
+// Returns { items, page, pageSize, total }.
+export async function getVerificationRequests(status = "pending", page = 1) {
+  return request(`/admin/verification-requests?status=${status}&page=${page}`);
+}
+
+// Admin: approves or rejects one request. A rejection needs a reason.
+export async function reviewVerificationRequest(id, status, rejectReason) {
+  const body = { status };
+  if (status === "rejected") body.rejectReason = rejectReason;
+  const data = await request(`/admin/verification-requests/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return data.request;
+}
+
 export async function forgotPassword(email) {
   await postJson("/auth/forgot-password", { email });
 }

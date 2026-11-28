@@ -2,7 +2,7 @@ import "./Navbar.css";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SearchBar from "./SearchBar";
-import { logout } from "./auth";
+import { logout, isAdmin } from "./auth";
 import useTheme from "./useTheme";
 
 function Navbar({ user, setUser }) {
@@ -65,6 +65,7 @@ function Navbar({ user, setUser }) {
                   <Link to="/profile">My Profile</Link>
                   <Link to="/edit-profile">Edit Profile</Link>
                   <Link to="/school">School Verification</Link>
+                  {isAdmin(user) && <Link to="/admin/verifications">Verification requests</Link>}
                   <Link to="/settings">Settings</Link>
                   <button onClick={handleLogout}>Log Out</button>
                 </div>
